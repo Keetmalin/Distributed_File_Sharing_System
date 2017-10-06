@@ -8,18 +8,22 @@ import java.net.InetAddress;
  * Project - Distributed_Systems_Project
  */
 import java.net.*;
+import java.util.StringTokenizer;
 
 public class DistributedNode {
 
-    public void join_network() {
+    private int port;
+    private String ipAddress;
+
+    private void join_network(int port, String ipAddress) {
 
 
         try {
+            this.port = port;
+            this.ipAddress = ipAddress;
 
             //create bootstrap request message - Format: 0036 REG 129.82.123.45 5001 1234abcd
             String length = "0036";
-            String ipAddress = InetAddress.getLocalHost().getHostAddress();
-            int port = 3000;
             String name = "1234abcd";
 
             String msg = length + ' ' + "REG" +  ' ' + ipAddress + ' ' + port + ' ' + name;
@@ -29,33 +33,52 @@ public class DistributedNode {
                     InetAddress.getByName(Constants.BOOTSTRAP_IP) , Constants.BOOTSTRAP_PORT);
 
             //Create a Datagram Socket
-            DatagramSocket datagramSocket = new DatagramSocket();
+            DatagramSocket datagramSocket = new DatagramSocket(port);
 
             //send to bootstrap server
             datagramSocket.send(datagramPacket);
             System.out.println("Data Packet Sent to Bootstrap Server: " + msg);
 
-            datagramSocket.close();
-
-            //Create a Datagram Socket
-            DatagramSocket datagramSocketListener = new DatagramSocket(port);
-
             //start listening to Bootstrap Server Response
             byte[] buffer = new byte[65536];
             DatagramPacket incoming = new DatagramPacket(buffer, buffer.length);
-            datagramSocketListener.receive(incoming);
+            datagramSocket.receive(incoming);
 
-            String responseMsg = new String(datagramPacket.getData(), 0, datagramPacket.getLength());
+            String responseMsg = new String(incoming.getData(), 0, incoming.getLength());
+            StringTokenizer st = new StringTokenizer(responseMsg, " ");
+
+            String responseLength = st.nextToken();
+            String responseCommand = st.nextToken();
+            String numberOfNodes = st.nextToken();
+
+            if ("0".equals(responseCommand)){
+                System.out.println("request is successful, no nodes in the system");
+            }
+            else if ("1".equals(responseCommand)){
+                System.out.println("request is successful, 1 nodes' contacts will be returned");
+            }
+            else if ("2".equals(responseCommand) ){
+                System.out.println("request is successful, 2 nodes' contacts will be returned");
+            }
+            else if ("9999 ".equals(responseCommand)){
+                System.out.println("failed, there is some error in the command");
+            }
+            else if ("9998".equals(responseCommand)){
+                System.out.println("failed, already registered to you, unregister first");
+            }
+            else if ("9997".equals(responseCommand)){
+                System.out.println("failed, registered to another user, try a different IP and port");
+            }
+            else if ("9996".equals(responseCommand)){
+                System.out.println("failed, can’t register. BS full.");
+            }
+
             System.out.println(responseMsg);
 
-            datagramSocketListener.close();
+            datagramSocket.close();
 
-        } catch (SocketException e) {
-            e.printStackTrace();
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
+        }  catch (IOException e) {
+            System.err.println("IOException " + e);
         }
 
     }
@@ -63,6 +86,6 @@ public class DistributedNode {
     public static void main(String[] args) throws Exception {
 
         DistributedNode distributedNode = new DistributedNode();
-        distributedNode.join_network();
+        distributedNode.join_network(3000, InetAddress.getLocalHost().getHostAddress());
     }
 }
