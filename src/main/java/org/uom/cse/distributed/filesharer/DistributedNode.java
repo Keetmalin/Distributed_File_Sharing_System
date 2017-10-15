@@ -17,6 +17,7 @@ public class DistributedNode {
 
     private void join_network(int port, String ipAddress) {
 
+
         try {
             this.port = port;
             this.ipAddress = ipAddress;
