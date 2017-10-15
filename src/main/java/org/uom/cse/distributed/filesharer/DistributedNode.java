@@ -1,14 +1,14 @@
+package org.uom.cse.distributed.filesharer;
+
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.util.StringTokenizer;
 
 /**
- * Created by Keetmalin on 10/6/2017
- * Project - Distributed_Systems_Project
+ * Created by Keetmalin on 10/6/2017 Project - Distributed_Systems_Project
  */
-import java.net.*;
-import java.util.StringTokenizer;
 
 public class DistributedNode {
 
@@ -16,7 +16,6 @@ public class DistributedNode {
     private String ipAddress;
 
     private void join_network(int port, String ipAddress) {
-
 
         try {
             this.port = port;
@@ -26,11 +25,11 @@ public class DistributedNode {
             String length = "0036";
             String name = "1234abcd";
 
-            String msg = length + ' ' + "REG" +  ' ' + ipAddress + ' ' + port + ' ' + name;
+            String msg = length + ' ' + "REG" + ' ' + ipAddress + ' ' + port + ' ' + name;
 
             //create a datagram packet to send to the Boostrap server
             DatagramPacket datagramPacket = new DatagramPacket(msg.getBytes(), msg.length(),
-                    InetAddress.getByName(Constants.BOOTSTRAP_IP) , Constants.BOOTSTRAP_PORT);
+                    InetAddress.getByName(Constants.BOOTSTRAP_IP), Constants.BOOTSTRAP_PORT);
 
             //Create a Datagram Socket
             DatagramSocket datagramSocket = new DatagramSocket(port);
@@ -51,25 +50,19 @@ public class DistributedNode {
             String responseCommand = st.nextToken();
             String numberOfNodes = st.nextToken();
 
-            if ("0".equals(responseCommand)){
+            if ("0".equals(responseCommand)) {
                 System.out.println("request is successful, no nodes in the system");
-            }
-            else if ("1".equals(responseCommand)){
+            } else if ("1".equals(responseCommand)) {
                 System.out.println("request is successful, 1 nodes' contacts will be returned");
-            }
-            else if ("2".equals(responseCommand) ){
+            } else if ("2".equals(responseCommand)) {
                 System.out.println("request is successful, 2 nodes' contacts will be returned");
-            }
-            else if ("9999 ".equals(responseCommand)){
+            } else if ("9999 ".equals(responseCommand)) {
                 System.out.println("failed, there is some error in the command");
-            }
-            else if ("9998".equals(responseCommand)){
+            } else if ("9998".equals(responseCommand)) {
                 System.out.println("failed, already registered to you, unregister first");
-            }
-            else if ("9997".equals(responseCommand)){
+            } else if ("9997".equals(responseCommand)) {
                 System.out.println("failed, registered to another user, try a different IP and port");
-            }
-            else if ("9996".equals(responseCommand)){
+            } else if ("9996".equals(responseCommand)) {
                 System.out.println("failed, can’t register. BS full.");
             }
 
@@ -77,7 +70,7 @@ public class DistributedNode {
 
             datagramSocket.close();
 
-        }  catch (IOException e) {
+        } catch (IOException e) {
             System.err.println("IOException " + e);
         }
 
