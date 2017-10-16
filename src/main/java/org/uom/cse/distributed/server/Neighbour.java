@@ -1,5 +1,10 @@
-package org.uom.cse.distributed.filesharer;
+package org.uom.cse.distributed.server;
 
+/**
+ * A bean to represent a node in the distributed network. {@link BootstrapServer} uses this.
+ * <p>
+ * Taken from CS4262 course CSE
+ */
 class Neighbour {
     private String ip;
     private int port;

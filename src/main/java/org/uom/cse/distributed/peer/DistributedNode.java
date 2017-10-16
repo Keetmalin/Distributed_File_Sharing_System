@@ -1,4 +1,6 @@
-package org.uom.cse.distributed.filesharer;
+package org.uom.cse.distributed.peer;
+
+import org.uom.cse.distributed.Constants;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -7,16 +9,14 @@ import java.net.InetAddress;
 import java.util.StringTokenizer;
 
 /**
- * Created by Keetmalin on 10/6/2017 Project - Distributed_Systems_Project
+ * The class to represent a Node in the distributed network.
  */
-
 public class DistributedNode {
 
     private int port;
     private String ipAddress;
 
-    private void join_network(int port, String ipAddress) {
-
+    private void joinNetwork(int port, String ipAddress) {
 
         try {
             this.port = port;
@@ -75,11 +75,5 @@ public class DistributedNode {
             System.err.println("IOException " + e);
         }
 
-    }
-
-    public static void main(String[] args) throws Exception {
-
-        DistributedNode distributedNode = new DistributedNode();
-        distributedNode.join_network(3000, InetAddress.getLocalHost().getHostAddress());
     }
 }

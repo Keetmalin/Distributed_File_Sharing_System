@@ -1,4 +1,4 @@
-package org.uom.cse.distributed.filesharer;
+package org.uom.cse.distributed.server;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -7,20 +7,39 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.StringTokenizer;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class BootstrapServer {
 
-    public static void main(String args[]) {
-        DatagramSocket sock = null;
+    private int port;
+    private boolean started = false;
+    private ExecutorService executorService;
+
+    public BootstrapServer(int port) {
+        this.port = port;
+    }
+
+    public void start() {
+        if (started) {
+            throw new IllegalStateException("Server already running");
+        }
+
+        executorService = Executors.newSingleThreadExecutor();
+        executorService.submit(this::doProcessing);
+    }
+
+    private void doProcessing() {
+        DatagramSocket sock;
         String s;
-        List<Neighbour> nodes = new ArrayList<Neighbour>();
+        List<Neighbour> nodes = new ArrayList<>();
 
         try {
-            sock = new DatagramSocket(55555);
+            sock = new DatagramSocket(port);
 
             echo("Bootstrap Server created at 55555. Waiting for incoming data...");
 
-            while (true) {
+            while (started) {
                 byte[] buffer = new byte[65536];
                 DatagramPacket incoming = new DatagramPacket(buffer, buffer.length);
                 sock.receive(incoming);
@@ -61,7 +80,8 @@ public class BootstrapServer {
                             if (nodes.size() == 1) {
                                 reply += "1 " + nodes.get(0).getIp() + " " + nodes.get(0).getPort();
                             } else if (nodes.size() == 2) {
-                                reply += "2 " + nodes.get(0).getIp() + " " + nodes.get(0).getPort() + " " + nodes.get(1).getIp() + " " + nodes.get(1).getPort();
+                                reply += "2 " + nodes.get(0).getIp() + " " + nodes.get(0).getPort() + " " +
+                                        nodes.get(1).getIp() + " " + nodes.get(1).getPort();
                             } else {
                                 Random r = new Random();
                                 int Low = 0;
@@ -72,7 +92,8 @@ public class BootstrapServer {
                                     random_2 = r.nextInt(High - Low) + Low;
                                 }
                                 echo(random_1 + " " + random_2);
-                                reply += "2 " + nodes.get(random_1).getIp() + " " + nodes.get(random_1).getPort() + " " + nodes.get(random_2).getIp() + " " + nodes.get(random_2).getPort();
+                                reply += "2 " + nodes.get(random_1).getIp() + " " + nodes.get(random_1).getPort() +
+                                        " " + nodes.get(random_2).getIp() + " " + nodes.get(random_2).getPort();
                             }
                             nodes.add(new Neighbour(ip, port, username));
                         }
@@ -80,7 +101,8 @@ public class BootstrapServer {
 
                     reply = String.format("%04d", reply.length() + 5) + " " + reply;
 
-                    DatagramPacket dpReply = new DatagramPacket(reply.getBytes(), reply.getBytes().length, incoming.getAddress(), incoming.getPort());
+                    DatagramPacket dpReply = new DatagramPacket(reply.getBytes(), reply.getBytes().length,
+                            incoming.getAddress(), incoming.getPort());
                     sock.send(dpReply);
                 } else if (command.equals("UNREG")) {
                     String ip = st.nextToken();
@@ -90,27 +112,50 @@ public class BootstrapServer {
                         if (nodes.get(i).getPort() == port) {
                             nodes.remove(i);
                             String reply = "0012 UNROK 0";
-                            DatagramPacket dpReply = new DatagramPacket(reply.getBytes(), reply.getBytes().length, incoming.getAddress(), incoming.getPort());
+                            DatagramPacket dpReply = new DatagramPacket(reply.getBytes(), reply.getBytes().length,
+                                    incoming.getAddress(), incoming.getPort());
                             sock.send(dpReply);
                         }
                     }
                 } else if (command.equals("ECHO")) {
                     for (int i = 0; i < nodes.size(); i++) {
-                        echo(nodes.get(i).getIp() + " " + nodes.get(i).getPort() + " " + nodes.get(i).getUsername());
+                        echo(nodes.get(i).getIp() + " " + nodes.get(i).getPort() + " " +
+                                nodes.get(i).getUsername());
                     }
                     String reply = "0012 ECHOK 0";
-                    DatagramPacket dpReply = new DatagramPacket(reply.getBytes(), reply.getBytes().length, incoming.getAddress(), incoming.getPort());
+                    DatagramPacket dpReply = new DatagramPacket(reply.getBytes(), reply.getBytes().length,
+                            incoming.getAddress(), incoming.getPort());
                     sock.send(dpReply);
                 }
-
             }
         } catch (IOException e) {
             System.err.println("IOException " + e);
         }
     }
 
-    //simple function to echo data to terminal
-    public static void echo(String msg) {
+    public void stop() {
+        if (started) {
+            started = false;
+            executorService.shutdownNow();
+        }
+    }
+
+    /**
+     * simple function to echo data to terminal
+     */
+    private void echo(String msg) {
         System.out.println(msg);
+    }
+
+    public int getPort() {
+        return port;
+    }
+
+    public void setPort(int port) {
+        this.port = port;
+    }
+
+    public boolean isStarted() {
+        return started;
     }
 }
