@@ -25,12 +25,21 @@ public class BootstrapServer {
             throw new IllegalStateException("Server already running");
         }
 
+        started = true;
         executorService = Executors.newSingleThreadExecutor();
-        executorService.submit(this::doProcessing);
+        executorService.submit(() -> {
+            try {
+                doProcessing();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+
+        Runtime.getRuntime().addShutdownHook(new Thread(this::stop));
     }
 
     private void doProcessing() {
-        DatagramSocket sock;
+        DatagramSocket sock = null;
         String s;
         List<Neighbour> nodes = new ArrayList<>();
 
@@ -130,6 +139,10 @@ public class BootstrapServer {
             }
         } catch (IOException e) {
             System.err.println("IOException " + e);
+        } finally {
+            if (sock != null) {
+                sock.close();
+            }
         }
     }
 

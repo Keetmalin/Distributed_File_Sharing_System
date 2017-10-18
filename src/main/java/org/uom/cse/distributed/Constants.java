@@ -5,7 +5,18 @@ package org.uom.cse.distributed;
  */
 public class Constants {
 
-    //need to set the Bostrap IP and Port here
-    public static int BOOTSTRAP_PORT = 55555;
-    public static String BOOTSTRAP_IP = "127.0.0.1";
+    private Constants() { }
+
+    /** Need to set the bootstrap IP and Port here */
+    public static final int BOOTSTRAP_PORT = 55555;
+    public static final String BOOTSTRAP_IP = "127.0.0.1";
+
+    /** How many times a given UDP request be retried */
+    public static final int RETRIES_COUNT = 3;
+
+    /** REG ${ip} ${port} ${username} */
+    public static final String REG_MSG_FORMAT = "REG %s %d %s";
+    /** Message format to be used when sending a request to the bootstrap server. ${length} ${msg} */
+    public static final String MSG_FORMAT = "%04d %s";
+    public static final String REGOK = "REGOK";
 }
