@@ -3,22 +3,21 @@ package org.uom.cse.distributed.peer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.uom.cse.distributed.Constants;
+import org.uom.cse.distributed.peer.api.State;
 import org.uom.cse.distributed.peer.api.StateManager;
+import org.uom.cse.distributed.peer.utils.RequestUtils;
 
 import java.io.IOException;
-import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.StringTokenizer;
 import java.util.UUID;
 
-import static org.uom.cse.distributed.Constants.BOOTSTRAP_IP;
-import static org.uom.cse.distributed.Constants.BOOTSTRAP_PORT;
 import static org.uom.cse.distributed.Constants.RETRIES_COUNT;
+import static org.uom.cse.distributed.peer.api.State.CONNECTED;
 import static org.uom.cse.distributed.peer.api.State.REGISTERED;
 import static org.uom.cse.distributed.peer.api.State.STARTED;
 import static org.uom.cse.distributed.peer.api.State.STARTING;
@@ -57,23 +56,25 @@ public class DistributedNode {
     }
 
     public void start() {
-        stateManager.checkState(STOPPED, STARTING);
-        stateManager.setState(STARTING);
-        logger.debug("Starting program on port - {}, ip - {}", port, ipAddress);
+        if (stateManager.getState().compareTo(STARTING) <= 0) {
+            stateManager.setState(STARTING);
+            logger.debug("Starting program on port - {}, ip - {}", port, ipAddress);
 
-        logger.debug("Creating Datagram Socket at port : {}", port);
-        try {
-            datagramSocket = new DatagramSocket(port);
-            stateManager.setState(STARTED);
-            logger.info("Datagram Socket created at port : {}", port);
-
-            register();
-            stateManager.setState(REGISTERED);
-            logger.info("Node registered successfully");
-        } catch (SocketException e) {
-            logger.error("Error when creating datagram socket", e);
-            throw new IllegalStateException("Unable to create datagram socket", e);
+            logger.debug("Creating Datagram Socket at port : {}", port);
+            try {
+                datagramSocket = new DatagramSocket(port);
+                logger.info("Datagram Socket created at port : {}", port);
+                stateManager.setState(STARTED);
+            } catch (SocketException e) {
+                logger.error("Error when creating datagram socket", e);
+                throw new IllegalStateException("Unable to create datagram socket", e);
+            }
         }
+
+        logger.debug("Registering node");
+        register();
+        stateManager.setState(REGISTERED);
+        logger.info("Node registered successfully");
 
         logger.info("Program started and registered on port - {}:{}", ipAddress, port);
     }
@@ -88,13 +89,15 @@ public class DistributedNode {
         stateManager.checkState(STARTED);
 
         String msg = String.format(Constants.REG_MSG_FORMAT, ipAddress, port, username);
+        String request = String.format(Constants.MSG_FORMAT, msg.length(), msg);
 
         int retriesLeft = numOfRetries;
         while (retriesLeft > 0) {
             try {
-                String response = sendRegisterRequest(datagramSocket, msg);
+                String response = RequestUtils.sendRequest(datagramSocket, request,
+                        InetAddress.getByName(Constants.BOOTSTRAP_IP), Constants.BOOTSTRAP_PORT);
                 logger.debug("Response received : {}", response);
-                List<InetSocketAddress> peers = processResponse(response);
+                List<InetSocketAddress> peers = RequestUtils.processRegisterResponse(response);
                 logger.debug("Response processed successfully. Found peers : {}", peers);
                 this.peers.addAll(peers);
                 break;
@@ -105,84 +108,40 @@ public class DistributedNode {
         }
     }
 
-    /**
-     * Sends the UDP request through the given {@link DatagramSocket}. This is a blocking method call.
-     *
-     * @param datagramSocket datagram socket
-     * @throws IOException sending failures
-     */
-    private String sendRegisterRequest(DatagramSocket datagramSocket, String msg) throws IOException {
+    private void unregister() {
+        stateManager.checkState(REGISTERED, CONNECTED);
+        logger.debug("Unregistering node");
+
+        String msg = String.format(Constants.UNREG_MSG_FORMAT, ipAddress, port, username);
         String request = String.format(Constants.MSG_FORMAT, msg.length(), msg);
 
-        logger.debug("Sending REG request: '{}' to bootstrap server", request);
-
-        // Create a datagram packet to send to the Boostrap server
-        DatagramPacket datagramPacket = new DatagramPacket(request.getBytes(), request.length(),
-                InetAddress.getByName(BOOTSTRAP_IP), BOOTSTRAP_PORT);
-        // Send to bootstrap server
-        datagramSocket.send(datagramPacket);
-        logger.debug("Datagram packet sent. Listening for response", request);
-        // Start listening to Bootstrap Server Response. First 4 bytes are read first to identify length of message.
-        byte[] buffer = new byte[65536];
-        DatagramPacket incoming = new DatagramPacket(buffer, buffer.length);
-        datagramSocket.receive(incoming);
-
-        return new String(incoming.getData(), 0, incoming.getLength());
-    }
-
-    /**
-     * Process the response received from the Bootstrap server in order to parse the peer information received.
-     *
-     * @param response response received from the bootstrap server
-     * @return list of peers received
-     */
-    private List<InetSocketAddress> processResponse(String response) {
-        logger.debug("Processing response : {}", response);
-
-        StringTokenizer st = new StringTokenizer(response, " ");
-        logger.debug("Response length: {}", st.nextToken());
-        String status = st.nextToken();
-
-        if (!Constants.REGOK.equals(status)) {
-            throw new IllegalStateException(Constants.REGOK + " not received");
-        }
-
-        int code = Integer.parseInt(st.nextToken());
-
-        List<InetSocketAddress> peers = new ArrayList<>();
-
-        switch (code) {
-            case 0:
-                logger.info("Successful - No nodes in the network yet");
-                break;
-            case 1:
-            case 2:
-                logger.info("Successful - Found 1/2 other nodes in the network");
-                while (st.hasMoreTokens()) {
-                    peers.add(new InetSocketAddress(st.nextToken(), Integer.parseInt(st.nextToken())));
+        int retriesLeft = numOfRetries;
+        while (retriesLeft > 0) {
+            try {
+                String response = RequestUtils.sendRequest(datagramSocket, request,
+                        InetAddress.getByName(Constants.BOOTSTRAP_IP), Constants.BOOTSTRAP_PORT);
+                logger.debug("Response received : {}", response);
+                if (RequestUtils.processUnregisterResponse(response)) {
+                    logger.info("Successfully unregistered");
+                    stateManager.setState(STARTED);
+                } else {
+                    logger.warn("Unable to unregister");
                 }
                 break;
-            case 9999:
-                logger.error("Failed. There are errors in your command");
-                break;
-            case 9998:
-                logger.error("Failed, already registered to you, unregister first");
-                break;
-            case 9997:
-                logger.error("Failed, registered to another user, try a different IP and port");
-                break;
-            case 9996:
-                logger.error("Failed, can’t register. BS full.");
-                break;
-            default:
-                throw new IllegalStateException("No proper status code returned");
+            } catch (IOException e) {
+                logger.error("Error occurred when sending the request", e);
+                retriesLeft--;
+            }
         }
-
-        return peers;
     }
 
     public void stop() {
         logger.debug("Stopping node");
+        if (stateManager.getState().compareTo(REGISTERED) >= 0) {
+            peers.clear();
+            unregister();
+        }
+
         if (stateManager.getState().compareTo(STARTED) >= 0) {
             logger.debug("Stopping Datagram Socket - {}:{}", ipAddress, port);
             datagramSocket.close();
@@ -202,6 +161,18 @@ public class DistributedNode {
 
     public String getIpAddress() {
         return ipAddress;
+    }
+
+    public List<InetSocketAddress> getPeers() {
+        return peers;
+    }
+
+    public State getState() {
+        return stateManager.getState();
+    }
+
+    public DatagramSocket getDatagramSocket() {
+        return datagramSocket;
     }
 
     @Override

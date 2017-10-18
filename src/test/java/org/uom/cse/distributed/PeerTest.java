@@ -5,9 +5,11 @@
 package org.uom.cse.distributed;
 
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.uom.cse.distributed.peer.DistributedNode;
+import org.uom.cse.distributed.peer.api.State;
 import org.uom.cse.distributed.server.BootstrapServer;
 
 import java.util.ArrayList;
@@ -31,8 +33,22 @@ public class PeerTest {
             DistributedNode node = new DistributedNode(port);
             nodes.add(node);
             node.start();
+
+            Assert.assertEquals(node.getState(), State.REGISTERED);
+            if (i == 1) {
+                Assert.assertEquals(node.getPeers().size(), 1);
+                Assert.assertEquals(node.getPeers().get(0).getPort(), port - 1);
+            } else if (i > 1) {
+                Assert.assertEquals(node.getPeers().size(), 2);
+            }
             port++;
         }
+
+        nodes.forEach(node -> {
+            node.stop();
+            Assert.assertEquals(node.getState(), State.STOPPED);
+            Assert.assertEquals(node.getPeers().size(), 0);
+        });
     }
 
     @AfterClass
