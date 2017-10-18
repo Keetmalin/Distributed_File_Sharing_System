@@ -46,7 +46,7 @@ public class PeerTest {
 
         nodes.forEach(node -> {
             node.stop();
-            Assert.assertEquals(node.getState(), State.STOPPED);
+            Assert.assertEquals(node.getState(), State.IDLE);
             Assert.assertEquals(node.getPeers().size(), 0);
         });
     }
