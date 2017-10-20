@@ -3,6 +3,7 @@ package org.uom.cse.distributed.peer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.uom.cse.distributed.peer.api.BootstrapProvider;
+import org.uom.cse.distributed.peer.api.CommunicationProvider;
 import org.uom.cse.distributed.peer.api.State;
 import org.uom.cse.distributed.peer.api.StateManager;
 
@@ -12,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import static org.uom.cse.distributed.peer.api.State.CONNECTED;
 import static org.uom.cse.distributed.peer.api.State.IDLE;
 import static org.uom.cse.distributed.peer.api.State.REGISTERED;
 
@@ -21,30 +23,33 @@ import static org.uom.cse.distributed.peer.api.State.REGISTERED;
  * @author Keet Malin
  * @author Imesha Sudasingha
  */
-public class DistributedNode {
+public class Node {
 
-    private static final Logger logger = LoggerFactory.getLogger(DistributedNode.class);
+    private static final Logger logger = LoggerFactory.getLogger(Node.class);
 
     private final StateManager stateManager = new StateManager(IDLE);
     private final List<InetSocketAddress> peers = new ArrayList<>();
-    private int port;
-    private String username;
-    private String ipAddress;
+    private final RoutingTable routingTable = new RoutingTable();
+    private final CommunicationProvider communicationProvider;
+    private final String username;
+    private final String ipAddress;
+    private final int port;
 
     private BootstrapProvider bootstrapProvider = new UDPBootstrapProvider();
 
-    public DistributedNode(int port) {
-        this(port, "localhost");
+    public Node(int port, CommunicationProvider communicationProvider) {
+        this(port, "localhost", communicationProvider);
     }
 
-    public DistributedNode(int port, String ipAddress) {
-        this(port, ipAddress, UUID.randomUUID().toString());
+    public Node(int port, String ipAddress, CommunicationProvider communicationProvider) {
+        this(port, ipAddress, UUID.randomUUID().toString(), communicationProvider);
     }
 
-    public DistributedNode(int port, String ipAddress, String username) {
+    public Node(int port, String ipAddress, String username, CommunicationProvider communicationProvider) {
         this.port = port;
         this.ipAddress = ipAddress;
         this.username = username;
+        this.communicationProvider = communicationProvider;
     }
 
     public void start() {
@@ -64,13 +69,34 @@ public class DistributedNode {
         }
 
         stateManager.setState(REGISTERED);
-        logger.info("Node registered successfully, Program started at {}:{}", ipAddress, port);
+        logger.info("Node registered successfully", ipAddress, port);
+
+        this.peers.forEach(peer -> {
+            List<RoutingTable.Entry> entries = communicationProvider.connect(peer);
+            entries.forEach(routingTable::addEntry);
+        });
+        stateManager.setState(CONNECTED);
+        logger.info("Successfully connected to the network and created routing table");
     }
 
 
     public void stop() {
         logger.debug("Stopping node");
         if (stateManager.getState().compareTo(REGISTERED) >= 0) {
+
+            if (stateManager.getState().compareTo(CONNECTED) >= 0) {
+                // TODO: 10/20/17 Should we disconnect from the peers or all entries in the routing table?
+                this.peers.forEach(peer -> {
+                    if (communicationProvider.disconnect(peer)) {
+                        logger.debug("Successfully disconnected from {}", peer);
+                    } else {
+                        logger.warn("Unable to disconnect from {}", peer);
+                    }
+                });
+
+                stateManager.setState(REGISTERED);
+            }
+
             peers.clear();
             try {
                 bootstrapProvider.unregister(ipAddress, port, username);
