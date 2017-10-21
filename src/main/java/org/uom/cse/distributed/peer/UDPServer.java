@@ -58,7 +58,6 @@ public class UDPServer implements Server {
         Runtime.getRuntime().addShutdownHook(new Thread(this::stop));
     }
 
-
     @Override
     public void listen() {
 

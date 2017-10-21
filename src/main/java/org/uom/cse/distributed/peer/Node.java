@@ -130,7 +130,10 @@ public class Node {
             });
         });
 
-        // 5. Send my files to corresponding nodes.
+        // 5 Add my node to my routing table
+        routingTable.addEntry(new RoutingTableEntry(new InetSocketAddress(ipAddress, port), String.valueOf(nodeId)));
+
+        // 6. Send my files to corresponding nodes.
         myFiles.addAll(getMyFiles());
         myFiles.forEach(file -> {
             String keywords[] = file.split(" ");

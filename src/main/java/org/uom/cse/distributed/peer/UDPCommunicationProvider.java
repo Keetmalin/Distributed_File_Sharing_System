@@ -8,13 +8,9 @@ import org.uom.cse.distributed.peer.utils.RequestUtils;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.SocketException;
-import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 
 import static org.uom.cse.distributed.Constants.NEWNODE_MSG_FORMAT;
@@ -33,17 +29,13 @@ public class UDPCommunicationProvider extends CommunicationProvider {
     @Override
     public Set<RoutingTableEntry> connect(InetSocketAddress peer) {
 
-        try {
-
+        try (DatagramSocket datagramSocket = new DatagramSocket()) {
             String msg = messageBuilder("GETTable");
 
-            DatagramPacket datagramPacket = new DatagramPacket(msg.getBytes(), msg.length(),
-                    InetAddress.getByName(peer.getHostName()), peer.getPort());
-            DatagramSocket datagramSocket = createDatagramSocket();
+            DatagramPacket datagramPacket = new DatagramPacket(msg.getBytes(), msg.length(), peer.getAddress(),
+                    peer.getPort());
             datagramSocket.send(datagramPacket);
-            logger.debug("Request sent to Peer node");
-            datagramSocket.close();
-
+            logger.debug("Request sent to Peer node: {}", msg);
 
             //start listening to Bootstrap Server Response
             byte[] buffer = new byte[65536];
@@ -52,18 +44,12 @@ public class UDPCommunicationProvider extends CommunicationProvider {
 
             String responseMsg = new String(incoming.getData(), 0, incoming.getLength());
             logger.debug(responseMsg);
-
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-        } catch (SocketException e) {
-            e.printStackTrace();
+            datagramSocket.close();
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("Error occurred when connecting to node : {}", peer);
         }
 
-
         //build message to send to peer
-
 
         logger.debug("connecting to peer");
         return null;
@@ -81,7 +67,7 @@ public class UDPCommunicationProvider extends CommunicationProvider {
 
         int retriesLeft = numOfRetries;
         while (retriesLeft > 0) {
-            try (DatagramSocket datagramSocket = createDatagramSocket()) {
+            try (DatagramSocket datagramSocket = new DatagramSocket()) {
                 String response = RequestUtils.sendRequest(datagramSocket, request, peer.getAddress(), peer.getPort());
                 logger.debug("Response received : {}", response);
             } catch (IOException e) {
@@ -99,11 +85,5 @@ public class UDPCommunicationProvider extends CommunicationProvider {
 
     private String messageBuilder(String request) {
         return request;
-    }
-
-    private DatagramSocket createDatagramSocket() throws SocketException {
-        int port = 10000 + new Random().nextInt(55536);
-        logger.debug("Creating Datagram Socket at random port : {}", port);
-        return new DatagramSocket(port);
     }
 }
