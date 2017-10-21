@@ -31,4 +31,11 @@ public abstract class CommunicationProvider {
      * @param peer peer from which I'm going to disconnect from
      */
     public abstract boolean disconnect(InetSocketAddress peer);
+
+    /**
+     * Connect to a peer and retrieve its routing table to client side
+     *
+     * @return void
+     */
+    public abstract void connectToPeer();
 }

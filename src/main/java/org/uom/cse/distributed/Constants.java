@@ -24,4 +24,9 @@ public class Constants {
     public static final String MSG_FORMAT = "%04d %s";
     public static final String REGOK = "REGOK";
     public static final String UNROK = "UNROK";
+
+    /** Message format to be used in Client Server Communications **/
+    public static final String GETROUTINGTABLE = "GETRT";
+    public static final String BROADCAST = "BCAST";
+    public static final String HANDOVER = "HNDVR";
 }

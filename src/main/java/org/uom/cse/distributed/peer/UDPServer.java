@@ -2,6 +2,7 @@ package org.uom.cse.distributed.peer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.uom.cse.distributed.peer.api.Server;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -10,13 +11,16 @@ import java.net.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import static org.uom.cse.distributed.Constants.BROADCAST;
+import static org.uom.cse.distributed.Constants.GETROUTINGTABLE;
+
 /**
  * This class implements the server side listening and handling of requests
  * Via UDP - for each node in the Distributed Network
  *
  * @author Keet Sugathadasa
  */
-public class UDPServer{
+public class UDPServer implements Server{
 
     private ExecutorService executorService;
     private static final Logger logger = LoggerFactory.getLogger(Node.class);
@@ -48,6 +52,7 @@ public class UDPServer{
     }
 
 
+    @Override
     public void listen() {
 
         DatagramSocket datagramSocket = null;
@@ -68,10 +73,8 @@ public class UDPServer{
                 logger.debug(incoming.getAddress().getHostAddress() + " : " + incoming.getPort() + " - "
                         + incomingMsg);
 
-                if ("RoutingTable".equals(incomingMsg)){
+                if (GETROUTINGTABLE.equals(incomingMsg)){
                     provideRoutingTable(incoming , datagramSocket);
-                } else if ("Peer".equals(incomingMsg)){
-                    addPeer("ipaddress", 2222);
                 }
 
 
@@ -88,22 +91,30 @@ public class UDPServer{
         datagramSocket.send(dpReply);
     }
 
-    private void provideRoutingTable(DatagramPacket incoming , DatagramSocket datagramSocket) throws IOException {
+    @Override
+    public void provideRoutingTable(DatagramPacket incoming, DatagramSocket datagramSocket) {
 
         final ByteArrayOutputStream baos = new ByteArrayOutputStream(6400);
-        final ObjectOutputStream oos = new ObjectOutputStream(baos);
-        oos.writeObject(this.node.getRoutingTable());
-        final byte[] data = baos.toByteArray();
 
-        DatagramPacket dpReply = new DatagramPacket(data, data.length,
-                incoming.getAddress(), incoming.getPort());
-        datagramSocket.send(dpReply);
+        try{
+            final ObjectOutputStream oos = new ObjectOutputStream(baos);
+            oos.writeObject(this.node.getRoutingTable().getEntries());
+            final byte[] data = baos.toByteArray();
+
+            DatagramPacket dpReply = new DatagramPacket(data, data.length,
+                    incoming.getAddress(), incoming.getPort());
+            datagramSocket.send(dpReply);
+
+        }catch (IOException e){
+            logger.error("Cannot connect to specified port and IP");
+        }
+
 
     }
 
-    private void addPeer(String ipAddress, int port) throws UnknownHostException {
-        this.node.addPeer(new InetSocketAddress(ipAddress , port));
-    }
+//    private void addPeer(String ipAddress, int port) throws UnknownHostException {
+//        this.node.addPeer(new InetSocketAddress(ipAddress , port));
+//    }
 
     public void stop(){
 
