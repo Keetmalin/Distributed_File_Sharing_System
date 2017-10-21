@@ -3,11 +3,12 @@
  */
 package org.uom.cse.distributed.peer.api;
 
-import org.uom.cse.distributed.peer.RoutingTable;
+import org.uom.cse.distributed.peer.RoutingTableEntry;
 
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * This is the interface to be used to communicate with nodes in the network. Provides communication between nodes in
@@ -24,7 +25,7 @@ public abstract class CommunicationProvider {
      * @param peer {@link InetSocketAddress} of the peer we are connecting
      * @return List of routing table entries of the peer.
      */
-    public abstract List<RoutingTable.Entry> connect(InetSocketAddress peer);
+    public abstract Set<RoutingTableEntry> connect(InetSocketAddress peer);
 
     /**
      * Disconnects from the given peer after notifying that node that I'm disconnecting.

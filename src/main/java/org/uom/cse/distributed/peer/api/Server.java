@@ -12,5 +12,6 @@ import java.net.DatagramSocket;
 public interface Server {
 
     void listen();
-    void provideRoutingTable(DatagramPacket incoming , DatagramSocket datagramSocket);
+    void provideRoutingTable(DatagramPacket incoming);
+    void handleBroadcastRequest(String nodeName , DatagramPacket datagramPacket, String ipAddress, int port);
 }

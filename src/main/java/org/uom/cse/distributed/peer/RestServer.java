@@ -14,13 +14,21 @@ import java.net.DatagramSocket;
  */
 public class RestServer implements Server{
 
+
     @Override
     public void listen() {
 
     }
 
     @Override
-    public void provideRoutingTable(DatagramPacket incoming, DatagramSocket datagramSocket) {
+    public void provideRoutingTable(DatagramPacket incoming) {
 
     }
+
+    @Override
+    public void handleBroadcastRequest(String nodeName, DatagramPacket datagramPacket, String ipAddress, int port) {
+
+    }
+
+
 }
