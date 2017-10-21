@@ -13,5 +13,5 @@ public interface BootstrapProvider {
 
     List<InetSocketAddress> register(String ipAddress, int port, String username) throws IOException;
 
-    void unregister(String ipAddress, int port, String username) throws IOException;
+    boolean unregister(String ipAddress, int port, String username) throws IOException;
 }
