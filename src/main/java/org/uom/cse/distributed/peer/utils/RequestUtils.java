@@ -7,7 +7,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.uom.cse.distributed.Constants;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -48,6 +50,30 @@ public class RequestUtils {
         datagramSocket.receive(incoming);
 
         return new String(incoming.getData(), 0, incoming.getLength());
+    }
+
+    /**
+     * Sends the UDP request through the given {@link DatagramSocket}. This is a blocking method call.
+     *
+     * @param datagramSocket datagram socket
+     * @throws IOException sending failures
+     */
+    public static void sendObjectRequest(DatagramSocket datagramSocket, Object requestObject,
+                                     InetAddress address, int port) throws IOException {
+        logger.debug("Sending request Object: to recipient");
+
+        //create a Byte Stream out of the object
+        final ByteArrayOutputStream baos = new ByteArrayOutputStream(6400);
+        final ObjectOutputStream oos = new ObjectOutputStream(baos);
+        oos.writeObject(requestObject);
+        final byte[] data = baos.toByteArray();
+
+        // Create a datagram packet to send to the recipient
+        DatagramPacket datagramPacket = new DatagramPacket(data, data.length, address, port);
+        // Send to recipient
+        datagramSocket.send(datagramPacket);
+        logger.debug("Datagram packet sent, listening for response");
+
     }
 
     /**

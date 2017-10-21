@@ -29,4 +29,5 @@ public class Constants {
     public static final String GETROUTINGTABLE = "GETRT";
     public static final String BROADCAST = "BCAST";
     public static final String HANDOVER = "HNDVR";
+    public static final String NEW_NODE_ENTRY = "newNodeEntry";
 }

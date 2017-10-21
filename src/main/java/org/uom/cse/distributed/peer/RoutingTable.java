@@ -75,14 +75,16 @@ public class RoutingTable {
     public class Entry {
         private InetSocketAddress address;
         private String nodeName;
+        private int port;
 
-        public Entry(InetSocketAddress address, String nodeName) {
-            if (address == null || nodeName == null) {
+        public Entry(InetSocketAddress address, String nodeName, int port) {
+            if (address == null || nodeName == null ) {
                 throw new IllegalArgumentException("Address and Node name should not be null");
             }
 
             this.address = address;
             this.nodeName = nodeName;
+            this.port = port;
         }
 
         public InetSocketAddress getAddress() {
@@ -92,6 +94,8 @@ public class RoutingTable {
         public String getNodeName() {
             return nodeName;
         }
+
+        public int getPort(){return port;}
 
         public void setNodeName(String nodeName) {
             this.nodeName = nodeName;
