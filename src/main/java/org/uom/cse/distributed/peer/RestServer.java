@@ -26,7 +26,9 @@ public class RestServer implements Server{
     }
 
     @Override
-    public void broadcast(String nodeName, DatagramPacket datagramPacket) {
+    public void handleBroadcastRequest(String nodeName, DatagramPacket datagramPacket, String ipAddress, int port) {
 
     }
+
+
 }

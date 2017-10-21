@@ -30,7 +30,7 @@ public class EntryTable {
 
     public void addEntry(EntryTableEntry entryTableEntry) {
         List<EntryTableEntry> duplicates = this.entries.stream()
-                .filter(e -> e.getAddress().equals(entryTableEntry.getAddress()))
+                .filter(e -> e.getWord().equals(entryTableEntry.getWord()))
                 .collect(Collectors.toList());
 
         if (duplicates.size() == 0) {

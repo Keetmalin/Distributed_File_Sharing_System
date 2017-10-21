@@ -37,7 +37,7 @@ public class UDPCommunicationProvider extends CommunicationProvider{
 
             DatagramPacket datagramPacket = new DatagramPacket(msg.getBytes(), msg.length(),
                     InetAddress.getByName(peer.getHostName()) , peer.getPort());
-            DatagramSocket datagramSocket = createDatagramSocket(this.node.getPort());
+            DatagramSocket datagramSocket = createDatagramSocket();
             datagramSocket.send(datagramPacket);
             logger.debug("Request sent to Peer node");
             datagramSocket.close();
@@ -70,6 +70,11 @@ public class UDPCommunicationProvider extends CommunicationProvider{
     @Override
     public boolean disconnect(InetSocketAddress peer) {
         return false;
+    }
+
+    @Override
+    public void connectToPeer() {
+
     }
 
     private String messageBuilder(String request){

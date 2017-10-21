@@ -12,6 +12,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.uom.cse.distributed.peer.api.State.CONNECTED;
@@ -38,8 +39,9 @@ public class Node {
 
     private BootstrapProvider bootstrapProvider = new UDPBootstrapProvider();
 
+    //TODO fix this constructor
     public Node(int port) {
-        this(port, new UDPCommunicationProvider(this));
+        this(port, new UDPCommunicationProvider((Node)new Object()));
     }
 
     public Node(int port, CommunicationProvider communicationProvider) {
@@ -77,7 +79,7 @@ public class Node {
         logger.info("Node registered successfully", ipAddress, port);
 
         this.peers.forEach(peer -> {
-            List<RoutingTable.Entry> entries = communicationProvider.connect(peer);
+            Set<RoutingTableEntry> entries = communicationProvider.connect(peer);
             entries.forEach(routingTable::addEntry);
         });
         stateManager.setState(CONNECTED);
