@@ -9,7 +9,7 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.uom.cse.distributed.peer.Node;
-import org.uom.cse.distributed.peer.communication.SocketBasedCommunicationProvider;
+import org.uom.cse.distributed.peer.UDPCommunicationProvider;
 import org.uom.cse.distributed.peer.api.State;
 import org.uom.cse.distributed.server.BootstrapServer;
 
@@ -31,7 +31,7 @@ public class SocketBasedPeerTest {
         List<Node> nodes = new ArrayList<>();
         int port = 35002;
         for (int i = 0; i < 10; i++) {
-            Node node = new Node(port, new SocketBasedCommunicationProvider());
+            Node node = new Node(port);
             nodes.add(node);
             node.start();
 

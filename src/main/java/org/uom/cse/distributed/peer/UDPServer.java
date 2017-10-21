@@ -2,15 +2,11 @@ package org.uom.cse.distributed.peer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.uom.cse.distributed.peer.api.Server;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.ServerSocket;
-import java.util.StringTokenizer;
+import java.net.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -20,7 +16,7 @@ import java.util.concurrent.Executors;
  *
  * @author Keet Sugathadasa
  */
-public class UDPServer implements Server {
+public class UDPServer{
 
     private ExecutorService executorService;
     private static final Logger logger = LoggerFactory.getLogger(Node.class);
@@ -51,7 +47,7 @@ public class UDPServer implements Server {
         Runtime.getRuntime().addShutdownHook(new Thread(this::stop));
     }
 
-    @Override
+
     public void listen() {
 
         DatagramSocket datagramSocket = null;
@@ -72,11 +68,11 @@ public class UDPServer implements Server {
                 logger.debug(incoming.getAddress().getHostAddress() + " : " + incoming.getPort() + " - "
                         + incomingMsg);
 
-//                if ("RoutingTable".equals(incomingMsg)){
-//                    provideRoutingTable();
-//                } else {
-//
-//                }
+                if ("RoutingTable".equals(incomingMsg)){
+                    provideRoutingTable(incoming , datagramSocket);
+                } else if ("Peer".equals(incomingMsg)){
+                    addPeer("ipaddress", 2222);
+                }
 
 
             }
@@ -103,6 +99,10 @@ public class UDPServer implements Server {
                 incoming.getAddress(), incoming.getPort());
         datagramSocket.send(dpReply);
 
+    }
+
+    private void addPeer(String ipAddress, int port) throws UnknownHostException {
+        this.node.addPeer(new InetSocketAddress(ipAddress , port));
     }
 
     public void stop(){

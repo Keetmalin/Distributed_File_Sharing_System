@@ -8,6 +8,7 @@ import org.uom.cse.distributed.peer.api.State;
 import org.uom.cse.distributed.peer.api.StateManager;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,6 +37,10 @@ public class Node {
     private final int port;
 
     private BootstrapProvider bootstrapProvider = new UDPBootstrapProvider();
+
+    public Node(int port) {
+        this(port, new UDPCommunicationProvider(this));
+    }
 
     public Node(int port, CommunicationProvider communicationProvider) {
         this(port, "localhost", communicationProvider);
@@ -136,5 +141,9 @@ public class Node {
     public void finalize() throws Throwable {
         stop();
         super.finalize();
+    }
+
+    public void addPeer(InetSocketAddress inetSocketAddress) {
+        this.peers.add(inetSocketAddress);
     }
 }
