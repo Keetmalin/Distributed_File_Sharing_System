@@ -6,14 +6,25 @@ import org.uom.cse.distributed.peer.api.BootstrapProvider;
 import org.uom.cse.distributed.peer.api.CommunicationProvider;
 import org.uom.cse.distributed.peer.api.State;
 import org.uom.cse.distributed.peer.api.StateManager;
+import org.uom.cse.distributed.peer.utils.HashUtils;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import static org.uom.cse.distributed.Constants.ADDRESSES_PER_CHARACTER;
+import static org.uom.cse.distributed.Constants.ADDRESS_SPACE_SIZE;
+import static org.uom.cse.distributed.peer.api.State.CONFIGURED;
 import static org.uom.cse.distributed.peer.api.State.CONNECTED;
 import static org.uom.cse.distributed.peer.api.State.IDLE;
 import static org.uom.cse.distributed.peer.api.State.REGISTERED;
@@ -29,12 +40,15 @@ public class Node {
     private static final Logger logger = LoggerFactory.getLogger(Node.class);
 
     private final StateManager stateManager = new StateManager(IDLE);
-    private final List<InetSocketAddress> peers = new ArrayList<>();
     private final RoutingTable routingTable = new RoutingTable();
+    private final Map<String, Map<String, List<Integer>>> fileMappings = new HashMap<>();
+    private final List<String> myFiles = new ArrayList<>();
+
     private final CommunicationProvider communicationProvider;
     private final String username;
     private final String ipAddress;
     private final int port;
+    private int nodeId;
 
     private BootstrapProvider bootstrapProvider = new UDPBootstrapProvider();
 
@@ -60,28 +74,112 @@ public class Node {
     public void start() {
         stateManager.checkState(State.IDLE);
 
+        // 1. Register and fetch 2 random peers from Bootstrap Server
         logger.debug("Registering node");
+        List<InetSocketAddress> peers;
         try {
-            List<InetSocketAddress> peers = bootstrapProvider.register(ipAddress, port, username);
-            if (peers != null) {
-                this.peers.addAll(peers);
-            } else {
-                logger.warn("Peers are null");
-            }
+            peers = bootstrapProvider.register(ipAddress, port, username);
         } catch (IOException e) {
             logger.error("Error occurred when registering node", e);
             throw new IllegalStateException("Unable to register this node", e);
         }
 
+        if (peers == null) {
+            logger.error("Peers are null");
+            throw new IllegalStateException("Unable to register successfully");
+        }
+
         stateManager.setState(REGISTERED);
         logger.info("Node registered successfully", ipAddress, port);
 
-        this.peers.forEach(peer -> {
+        // 2. Connect to the peers send by BS and fetch their routing tables
+        logger.debug("Collecting routing table from peers: {}", peers);
+        peers.forEach(peer -> {
             List<RoutingTable.Entry> entries = communicationProvider.connect(peer);
             entries.forEach(routingTable::addEntry);
         });
         stateManager.setState(CONNECTED);
+
         logger.info("Successfully connected to the network and created routing table");
+
+        // 3. Select a Node Name
+        this.nodeId = selectNodeName();
+        logger.info("Selected node ID - {}", nodeId);
+
+        // 4. Broadcast that I have joined the network to all entries in the routing table
+        this.routingTable.getEntries().forEach(entry -> {
+            Map<String, Map<String, List<Integer>>> toBeUndertaken = communicationProvider.notifyNewNode(
+                    entry.getAddress(), new InetSocketAddress(ipAddress, port), this.nodeId);
+
+            toBeUndertaken.forEach((letter, keywordMap) -> {
+                logger.info("Undertaking letter '{}' and keywords : {}", letter, keywordMap);
+
+                // First put the letter [A-Z0-9]
+                fileMappings.putIfAbsent(letter, new HashMap<>());
+
+                // Then put the keywords under each letter
+                keywordMap.forEach((keyword, nodeList) -> {
+                    fileMappings.get(letter).putIfAbsent(keyword, new ArrayList<>());
+                    nodeList.forEach(nodeId -> {
+                        logger.debug("Adding node-{} for keyword: {}", nodeId, keyword);
+                        if (!fileMappings.get(letter).get(keyword).contains(nodeId)) {
+                            fileMappings.get(letter).get(keyword).add(nodeId);
+                        }
+                    });
+                });
+            });
+        });
+
+        // 5. Send my files to corresponding nodes.
+        myFiles.addAll(getMyFiles());
+        myFiles.forEach(file -> {
+            String keywords[] = file.split(" ");
+            Stream.of(keywords).forEach(keyword -> {
+                int nodeId = HashUtils.keywordToNodeId(keyword);
+                Optional<RoutingTable.Entry> entry = routingTable.findNodeOrSuccessor(String.valueOf(nodeId));
+
+                // Usually an entry should be present.
+                if (entry.isPresent()) {
+                    logger.info("Offering keyword ({}-{}) to Node - {}", keyword, file, entry.get());
+                    communicationProvider.offerFile(entry.get().getAddress(), keyword, file);
+                } else {
+                    // I should take over this file name
+                    logger.info("I'm indexing ({}-{})", keyword, file);
+                }
+            });
+        });
+
+        stateManager.setState(CONFIGURED);
+    }
+
+    /**
+     * Selects a Node Name for the newly connected node (this one). When selecting, we chose a random node name within
+     * <strong>1 - 180</strong> which maps from <strong>[A-Z0-9] -> [1-180]</strong>.
+     *
+     * @return The selected node name
+     */
+    private int selectNodeName() {
+        Set<Integer> usedNodes = this.routingTable.getEntries().stream()
+                .map(entry -> Integer.parseInt(entry.getNodeName()) / ADDRESSES_PER_CHARACTER)
+                .collect(Collectors.toSet());
+
+        Random random = new Random();
+        // We can allow up to 36 Nodes in our network this way.
+        while (true) {
+            int candidate = 1 + random.nextInt(ADDRESS_SPACE_SIZE);
+            if (!usedNodes.contains(candidate)) {
+                return candidate;
+            }
+        }
+    }
+
+    /**
+     * Returns the list of file available in my node.
+     *
+     * @return List of files available in my node.
+     */
+    private List<String> getMyFiles() {
+        return Arrays.asList("Windows XP", "Harry Potter", "Kung Fu Panda");
     }
 
     public void stop() {
@@ -89,19 +187,22 @@ public class Node {
         if (stateManager.getState().compareTo(REGISTERED) >= 0) {
 
             if (stateManager.getState().compareTo(CONNECTED) >= 0) {
+                // TODO: 10/21/17 Notify all the indexed nodes that I'm leaving
                 // TODO: 10/20/17 Should we disconnect from the peers or all entries in the routing table?
-                this.peers.forEach(peer -> {
-                    if (communicationProvider.disconnect(peer)) {
-                        logger.debug("Successfully disconnected from {}", peer);
+                this.routingTable.getEntries().forEach(entry -> {
+                    if (communicationProvider.disconnect(entry.getAddress())) {
+                        logger.debug("Successfully disconnected from {}", entry);
                     } else {
-                        logger.warn("Unable to disconnect from {}", peer);
+                        logger.warn("Unable to disconnect from {}", entry);
                     }
                 });
 
+                this.routingTable.clear();
+                this.myFiles.clear();
+                this.fileMappings.clear();
                 stateManager.setState(REGISTERED);
             }
 
-            peers.clear();
             try {
                 bootstrapProvider.unregister(ipAddress, port, username);
             } catch (IOException e) {
@@ -129,10 +230,6 @@ public class Node {
         return routingTable;
     }
 
-    public List<InetSocketAddress> getPeers() {
-        return peers;
-    }
-
     public State getState() {
         return stateManager.getState();
     }
@@ -141,9 +238,5 @@ public class Node {
     public void finalize() throws Throwable {
         stop();
         super.finalize();
-    }
-
-    public void addPeer(InetSocketAddress inetSocketAddress) {
-        this.peers.add(inetSocketAddress);
     }
 }

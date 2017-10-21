@@ -9,7 +9,6 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.uom.cse.distributed.peer.Node;
-import org.uom.cse.distributed.peer.UDPCommunicationProvider;
 import org.uom.cse.distributed.peer.api.State;
 import org.uom.cse.distributed.server.BootstrapServer;
 
@@ -36,19 +35,15 @@ public class SocketBasedPeerTest {
             node.start();
 
             Assert.assertEquals(node.getState(), State.CONNECTED);
-            if (i == 1) {
-                Assert.assertEquals(node.getPeers().size(), 1);
-                Assert.assertEquals(node.getPeers().get(0).getPort(), port - 1);
-            } else if (i > 1) {
-                Assert.assertEquals(node.getPeers().size(), 2);
-            }
+            Assert.assertEquals(node.getRoutingTable().getEntries().size(), i);
+
             port++;
         }
 
         nodes.forEach(node -> {
             node.stop();
             Assert.assertEquals(node.getState(), State.IDLE);
-            Assert.assertEquals(node.getPeers().size(), 0);
+            Assert.assertEquals(node.getRoutingTable().getEntries().size(), 0);
         });
     }
 

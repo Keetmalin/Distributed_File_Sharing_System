@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -33,7 +34,7 @@ public class RoutingTable {
     private final Set<Entry> entries = Collections.synchronizedSet(new HashSet<>());
 
     public Set<Entry> getEntries() {
-        return entries;
+        return new HashSet<>(entries);
     }
 
     public void addEntry(Entry entry) {
@@ -42,6 +43,7 @@ public class RoutingTable {
                 .collect(Collectors.toList());
 
         if (duplicates.size() == 0) {
+            logger.debug("Adding entry: {} to the routing table", entry);
             this.entries.add(entry);
         } else if (duplicates.stream().filter(e -> e.getNodeName().equals(entry.getNodeName())).count() == 1) {
             logger.warn("Entry : {} already exists", entry);
@@ -58,6 +60,13 @@ public class RoutingTable {
     }
 
     /**
+     * Removes all the entries in the routing table and clears it.
+     */
+    public void clear() {
+        this.entries.clear();
+    }
+
+    /**
      * Finds the {@link InetSocketAddress} of a given node. Searched by the {@link Entry#nodeName}
      *
      * @param nodeName Name of the node of which IP-port info is required to be found
@@ -67,6 +76,31 @@ public class RoutingTable {
         return this.entries.stream()
                 .filter(e -> e.getNodeName().equals(nodeName))
                 .findFirst();
+    }
+
+    /**
+     * Finds the routing table entry corresponding to the nodeName. The entry can be the exact node of the successor of
+     * that node.
+     *
+     * @param nodeName Node name to be found in the routing table
+     * @return optional of entry
+     */
+    public Optional<Entry> findNodeOrSuccessor(String nodeName) {
+        List<Entry> sortedEntries = this.entries.stream()
+                .sorted(Comparator.comparingInt(e -> Integer.parseInt(e.getNodeName())))
+                .collect(Collectors.toList());
+
+        Optional<Entry> successor = sortedEntries.stream()
+                .filter(e -> Integer.parseInt(e.getNodeName()) >= Integer.parseInt(nodeName))
+                .findFirst();
+
+        if (successor.isPresent()) {
+            return successor;
+        } else if (sortedEntries.size() > 0) {
+            return Optional.of(sortedEntries.get(0));
+        } else {
+            return Optional.empty();
+        }
     }
 
     /**

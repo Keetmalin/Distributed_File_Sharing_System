@@ -7,6 +7,7 @@ import org.uom.cse.distributed.peer.RoutingTable;
 
 import java.net.InetSocketAddress;
 import java.util.List;
+import java.util.Map;
 
 /**
  * This is the interface to be used to communicate with nodes in the network. Provides communication between nodes in
@@ -33,9 +34,23 @@ public abstract class CommunicationProvider {
     public abstract boolean disconnect(InetSocketAddress peer);
 
     /**
-     * Connect to a peer and retrieve its routing table to client side
+     * This is the method to be called iteratively on order to broadcast about the joining of new node (me) to all the
+     * nodes in the network.
      *
-     * @return void
+     * @param peer   Node to which I'm notifying my presence
+     * @param me     My ip and port info
+     * @param nodeId My node ID. This is used to determine what are the keywords that I'm going to look at.
+     * @return Map of keyword and node mappings which should be undertaken by me from this point onwards.
      */
-    public abstract void connectToPeer();
+    public abstract Map<String, Map<String, List<Integer>>> notifyNewNode(InetSocketAddress peer, InetSocketAddress me,
+            int nodeId);
+
+    /**
+     * Sends the given file and keyword to the node given by {@link InetSocketAddress} to be indexed.
+     *
+     * @param peer    Owner who indexes that keyword
+     * @param keyword keyword to be send
+     * @param file    file name to be sent
+     */
+    public abstract void offerFile(InetSocketAddress peer, String keyword, String file);
 }

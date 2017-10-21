@@ -14,6 +14,10 @@ public class Constants {
     /** How many times a given UDP request be retried */
     public static final int RETRIES_COUNT = 3;
 
+    public static final int ADDRESS_SPACE_SIZE = 180;
+    public static final int CHARACTER_SPACE_SIZE = 36;
+    public static final int ADDRESSES_PER_CHARACTER = ADDRESS_SPACE_SIZE / CHARACTER_SPACE_SIZE;
+
     /** REG ${ip} ${port} ${username} */
     public static final String REG_MSG_FORMAT = "REG %s %d %s";
 
