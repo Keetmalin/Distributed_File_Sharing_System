@@ -76,6 +76,25 @@ public class RequestUtils {
 
     }
 
+
+    /**
+     * Sends the UDP request through the given {@link DatagramSocket}. This is a blocking method call.
+     *
+     * @param datagramSocket datagram socket
+     * @throws IOException sending failures
+     */
+    public static void sendResponse(DatagramSocket datagramSocket, String response,
+                                         InetAddress address, int port) throws IOException {
+        logger.debug("Sending response to recipient");
+
+        // Create a datagram packet to send to the recipient
+        DatagramPacket datagramPacket = new DatagramPacket(response.getBytes(), response.length(), address, port);
+        // Send to recipient
+        datagramSocket.send(datagramPacket);
+        logger.debug("Datagram packet sent, listening for response", response);
+
+    }
+
     /**
      * Process the response received from the Bootstrap server in order to parse the peer information received.
      *

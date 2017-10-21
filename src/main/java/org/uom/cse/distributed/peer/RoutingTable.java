@@ -30,88 +30,44 @@ public class RoutingTable {
 
     private static final Logger logger = LoggerFactory.getLogger(RoutingTable.class);
 
-    private final Set<Entry> entries = Collections.synchronizedSet(new HashSet<>());
+    private final Set<RoutingTableEntry> entries = Collections.synchronizedSet(new HashSet<>());
 
-    public Set<Entry> getEntries() {
+    public Set<RoutingTableEntry> getEntries() {
         return entries;
     }
 
-    public void addEntry(Entry entry) {
-        List<Entry> duplicates = this.entries.stream()
-                .filter(e -> e.getAddress().equals(entry.getAddress()))
+    public void addEntry(RoutingTableEntry routingTableEntry) {
+        List<RoutingTableEntry> duplicates = this.entries.stream()
+                .filter(e -> e.getAddress().equals(routingTableEntry.getAddress()))
                 .collect(Collectors.toList());
 
         if (duplicates.size() == 0) {
-            this.entries.add(entry);
-        } else if (duplicates.stream().filter(e -> e.getNodeName().equals(entry.getNodeName())).count() == 1) {
-            logger.warn("Entry : {} already exists", entry);
+            this.entries.add(routingTableEntry);
+        } else if (duplicates.stream().filter(e -> e.getNodeName().equals(routingTableEntry.getNodeName())).count() == 1) {
+            logger.warn("RoutingTableEntry : {} already exists", routingTableEntry);
         } else {
-            // We have an erroneous entry. Correct it.
-            Entry e = duplicates.get(0);
-            logger.warn("Correcting entry {} to {}", e, entry);
-            e.setNodeName(entry.getNodeName());
+            // We have an erroneous routingTableEntry. Correct it.
+            RoutingTableEntry e = duplicates.get(0);
+            logger.warn("Correcting routingTableEntry {} to {}", e, routingTableEntry);
+            e.setNodeName(routingTableEntry.getNodeName());
         }
     }
 
-    public boolean removeEntry(Entry e) {
+    public boolean removeEntry(RoutingTableEntry e) {
         return this.entries.remove(e);
     }
 
     /**
-     * Finds the {@link InetSocketAddress} of a given node. Searched by the {@link Entry#nodeName}
+     * Finds the {@link InetSocketAddress} of a given node. Searched by the {@link RoutingTableEntry#nodeName}
      *
      * @param nodeName Name of the node of which IP-port info is required to be found
      * @return Optional of {@link InetSocketAddress}
      */
-    public Optional<Entry> findByNodeName(String nodeName) {
+    public Optional<RoutingTableEntry> findByNodeName(String nodeName) {
         return this.entries.stream()
                 .filter(e -> e.getNodeName().equals(nodeName))
                 .findFirst();
     }
 
-    /**
-     * Represents an entry in the routing table. Consists of IP, port and Node name.
-     */
-    public class Entry {
-        private InetSocketAddress address;
-        private String nodeName;
-        private int port;
 
-        public Entry(InetSocketAddress address, String nodeName, int port) {
-            if (address == null || nodeName == null ) {
-                throw new IllegalArgumentException("Address and Node name should not be null");
-            }
-
-            this.address = address;
-            this.nodeName = nodeName;
-            this.port = port;
-        }
-
-        public InetSocketAddress getAddress() {
-            return address;
-        }
-
-        public String getNodeName() {
-            return nodeName;
-        }
-
-        public int getPort(){return port;}
-
-        public void setNodeName(String nodeName) {
-            this.nodeName = nodeName;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            return o != null &&
-                    o instanceof Entry &&
-                    this.getNodeName().equals(((Entry) o).getNodeName()) &&
-                    this.getAddress().equals(((Entry) o).getAddress());
-        }
-
-        @Override
-        public String toString() {
-            return String.format("%s-%s", nodeName, address);
-        }
-    }
 }

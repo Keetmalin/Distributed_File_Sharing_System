@@ -13,5 +13,5 @@ public interface Server {
 
     void listen();
     void provideRoutingTable(DatagramPacket incoming);
-    void broadcast(String nodeName , DatagramPacket datagramPacket);
+    void handleBroadcastRequest(String nodeName , DatagramPacket datagramPacket, String ipAddress, int port);
 }
