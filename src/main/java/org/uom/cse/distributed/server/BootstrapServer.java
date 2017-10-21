@@ -10,6 +10,13 @@ import java.util.StringTokenizer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+
+/**
+ * A class to manage the Bootstrap Server Implementation
+ *
+ * Taken from CS4262 course CSE
+ * Provided by Dilum Bandara and Anura P. Jayasumana
+ */
 public class BootstrapServer {
 
     private int port;
