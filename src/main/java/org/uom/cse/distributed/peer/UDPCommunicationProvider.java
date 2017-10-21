@@ -6,11 +6,18 @@ import org.uom.cse.distributed.peer.api.CommunicationProvider;
 import org.uom.cse.distributed.peer.utils.RequestUtils;
 
 import java.io.IOException;
-import java.net.*;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.SocketException;
+import java.net.UnknownHostException;
+import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
-import static org.uom.cse.distributed.Constants.NEW_NODE_ENTRY;
+import static org.uom.cse.distributed.Constants.NEWNODE_MSG_FORMAT;
 import static org.uom.cse.distributed.Constants.RETRIES_COUNT;
 
 /**
@@ -18,15 +25,10 @@ import static org.uom.cse.distributed.Constants.RETRIES_COUNT;
  *
  * @author Keet Sugathadasa
  */
-public class UDPCommunicationProvider extends CommunicationProvider{
+public class UDPCommunicationProvider extends CommunicationProvider {
 
     private static final Logger logger = LoggerFactory.getLogger(Node.class);
-    private final Node node;
     private final int numOfRetries = RETRIES_COUNT;
-
-    public UDPCommunicationProvider(Node node){
-        this.node= node;
-    }
 
     @Override
     public Set<RoutingTableEntry> connect(InetSocketAddress peer) {
@@ -36,7 +38,7 @@ public class UDPCommunicationProvider extends CommunicationProvider{
             String msg = messageBuilder("GETTable");
 
             DatagramPacket datagramPacket = new DatagramPacket(msg.getBytes(), msg.length(),
-                    InetAddress.getByName(peer.getHostName()) , peer.getPort());
+                    InetAddress.getByName(peer.getHostName()), peer.getPort());
             DatagramSocket datagramSocket = createDatagramSocket();
             datagramSocket.send(datagramPacket);
             logger.debug("Request sent to Peer node");
@@ -73,45 +75,35 @@ public class UDPCommunicationProvider extends CommunicationProvider{
     }
 
     @Override
-    public void connectToPeer() {
+    public Map<String, Map<String, List<Integer>>> notifyNewNode(InetSocketAddress peer, InetSocketAddress me, int nodeId) {
+        String request = String.format(NEWNODE_MSG_FORMAT, me.getHostName(), me.getPort(), nodeId);
+        logger.debug("Notifying new node to {} as message: {}", peer, request);
+
+        int retriesLeft = numOfRetries;
+        while (retriesLeft > 0) {
+            try (DatagramSocket datagramSocket = createDatagramSocket()) {
+                String response = RequestUtils.sendRequest(datagramSocket, request, peer.getAddress(), peer.getPort());
+                logger.debug("Response received : {}", response);
+            } catch (IOException e) {
+                logger.error("Error occurred when sending the request", e);
+                retriesLeft--;
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public void offerFile(InetSocketAddress peer, String keyword, String file) {
 
     }
 
-    private String messageBuilder(String request){
-        return  request;
+    private String messageBuilder(String request) {
+        return request;
     }
 
     private DatagramSocket createDatagramSocket() throws SocketException {
-        int port = this.node.getPort() + new Random().nextInt(55536);
-        logger.debug("Creating Datagram Socket at port : {}", port);
+        int port = 10000 + new Random().nextInt(55536);
+        logger.debug("Creating Datagram Socket at random port : {}", port);
         return new DatagramSocket(port);
-    }
-
-    public void broadcast(String nodeName , DatagramPacket datagramPacket) {
-
-        String request = buildNewNodeEntry();
-
-        Set<RoutingTableEntry> routingEntries = node.getRoutingTable().getEntries();
-        for (RoutingTableEntry routingTableEntry : routingEntries) {
-
-            int retriesLeft = numOfRetries;
-            while (retriesLeft > 0) {
-                try (DatagramSocket datagramSocket = createDatagramSocket()) {
-                    String response = RequestUtils.sendRequest(datagramSocket, request, routingTableEntry.getAddress().getAddress(),
-                            routingTableEntry.getAddress().getPort());
-                    logger.debug("Response received : {}", response);
-                } catch (IOException e) {
-                    logger.error("Error occurred when sending the request", e);
-                    retriesLeft--;
-                }
-            }
-
-        }
-
-        logger.debug("broadcast to all entries in the routing table complete");
-    }
-
-    private String buildNewNodeEntry(){
-        return NEW_NODE_ENTRY + " " + node.getUsername() + " " + node.getIpAddress() + " " + String.valueOf(node.getPort());
     }
 }

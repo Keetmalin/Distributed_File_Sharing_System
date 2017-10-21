@@ -32,7 +32,7 @@ import static org.uom.cse.distributed.peer.api.State.REGISTERED;
 /**
  * The class to represent a Node in the distributed network.
  *
- * @author Keet Malin
+ * @author Keet Sugathadasa
  * @author Imesha Sudasingha
  */
 public class Node {
@@ -53,7 +53,7 @@ public class Node {
     private BootstrapProvider bootstrapProvider = new UDPBootstrapProvider();
 
     public Node(int port) {
-        this(port, new UDPCommunicationProvider(this));
+        this(port, new UDPCommunicationProvider());
     }
 
     public Node(int port, CommunicationProvider communicationProvider) {
@@ -95,7 +95,7 @@ public class Node {
         // 2. Connect to the peers send by BS and fetch their routing tables
         logger.debug("Collecting routing table from peers: {}", peers);
         peers.forEach(peer -> {
-            List<RoutingTable.Entry> entries = communicationProvider.connect(peer);
+            Set<RoutingTableEntry> entries = communicationProvider.connect(peer);
             entries.forEach(routingTable::addEntry);
         });
         stateManager.setState(CONNECTED);
@@ -136,7 +136,7 @@ public class Node {
             String keywords[] = file.split(" ");
             Stream.of(keywords).forEach(keyword -> {
                 int nodeId = HashUtils.keywordToNodeId(keyword);
-                Optional<RoutingTable.Entry> entry = routingTable.findNodeOrSuccessor(String.valueOf(nodeId));
+                Optional<RoutingTableEntry> entry = routingTable.findNodeOrSuccessor(String.valueOf(nodeId));
 
                 // Usually an entry should be present.
                 if (entry.isPresent()) {

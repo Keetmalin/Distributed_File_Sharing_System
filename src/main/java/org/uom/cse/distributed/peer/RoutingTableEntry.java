@@ -1,13 +1,13 @@
+/* 
+ * <Paste your header here>
+ */
 package org.uom.cse.distributed.peer;
 
 import java.net.InetSocketAddress;
 
 /**
- * This class represents the entry to be stored inside the routing table
- *
- * @author Keet Sugathadasa
+ * Represents an entry in the routing table. Consists of IP, port and Node name.
  */
-
 public class RoutingTableEntry {
     private InetSocketAddress address;
     private String nodeName;

@@ -6,21 +6,27 @@ import org.uom.cse.distributed.peer.api.Server;
 import org.uom.cse.distributed.peer.utils.RequestUtils;
 
 import java.io.IOException;
-import java.net.*;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetSocketAddress;
+import java.net.SocketException;
 import java.util.Random;
 import java.util.StringTokenizer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import static org.uom.cse.distributed.Constants.*;
+import static org.uom.cse.distributed.Constants.BROADCAST;
+import static org.uom.cse.distributed.Constants.GETROUTINGTABLE;
+import static org.uom.cse.distributed.Constants.RESPONSE_OK;
+import static org.uom.cse.distributed.Constants.RETRIES_COUNT;
 
 /**
- * This class implements the server side listening and handling of requests
- * Via UDP - for each node in the Distributed Network
+ * This class implements the server side listening and handling of requests Via UDP - for each node in the Distributed
+ * Network
  *
  * @author Keet Sugathadasa
  */
-public class UDPServer implements Server{
+public class UDPServer implements Server {
 
     private ExecutorService executorService;
     private static final Logger logger = LoggerFactory.getLogger(Node.class);
@@ -28,7 +34,7 @@ public class UDPServer implements Server{
     private boolean started = false;
     private final int numOfRetries = RETRIES_COUNT;
 
-    public UDPServer(Node node){
+    public UDPServer(Node node) {
         this.node = node;
         this.started = true;
     }
@@ -60,7 +66,7 @@ public class UDPServer implements Server{
         String incomingMsg;
 
 
-        try{
+        try {
             datagramSocket = new DatagramSocket(this.node.getPort());
             logger.debug("Node is Listening to incoming requests");
 
@@ -82,7 +88,7 @@ public class UDPServer implements Server{
                 String request = st.nextToken();
                 String nodeName = st.nextToken();
 
-                if (GETROUTINGTABLE.equals(request)){
+                if (GETROUTINGTABLE.equals(request)) {
                     provideRoutingTable(incoming);
                 } else if (BROADCAST.equals(request)) {
                     String ipAddress = st.nextToken();
@@ -93,16 +99,16 @@ public class UDPServer implements Server{
 
             }
 
-        }catch (IOException e){
+        } catch (IOException e) {
             logger.error("Error occurred when listening on Port", e);
         }
     }
 
-//    private void sendResponse(String response , DatagramPacket incoming , DatagramSocket datagramSocket) throws IOException{
-//        DatagramPacket dpReply = new DatagramPacket(response.getBytes(), response.getBytes().length,
-//                incoming.getAddress(), incoming.getPort());
-//        datagramSocket.send(dpReply);
-//    }
+    //    private void sendResponse(String response , DatagramPacket incoming , DatagramSocket datagramSocket) throws IOException{
+    //        DatagramPacket dpReply = new DatagramPacket(response.getBytes(), response.getBytes().length,
+    //                incoming.getAddress(), incoming.getPort());
+    //        datagramSocket.send(dpReply);
+    //    }
 
     @Override
     public void provideRoutingTable(DatagramPacket incoming) {
@@ -124,7 +130,7 @@ public class UDPServer implements Server{
     }
 
     @Override
-    public void handleBroadcastRequest(String nodeName , DatagramPacket datagramPacket, String ipAddress, int port){
+    public void handleBroadcastRequest(String nodeName, DatagramPacket datagramPacket, String ipAddress, int port) {
 
         InetSocketAddress inetSocketAddress = new InetSocketAddress(ipAddress, port);
         RoutingTableEntry routingTableEntry = new RoutingTableEntry(inetSocketAddress, nodeName);
@@ -156,43 +162,43 @@ public class UDPServer implements Server{
         return new DatagramSocket(port);
     }
 
-//    @Override
-//    public void broadcast(String nodeName , DatagramPacket datagramPacket) {
-//
-//        String request = buildNewNodeEntry();
-//
-//        Set<RoutingTable.RoutingTableEntry> routingEntries = node.getRoutingTable().getEntries();
-//        for (RoutingTable.RoutingTableEntry entry: routingEntries) {
-//
-//            int retriesLeft = numOfRetries;
-//            while (retriesLeft > 0) {
-//                try (DatagramSocket datagramSocket = createDatagramSocket()) {
-//                    String response = RequestUtils.sendRequest(datagramSocket, request, entry.getAddress().getAddress(),
-//                            entry.getPort());
-//                    logger.debug("Response received : {}", response);
-//                } catch (IOException e) {
-//                    logger.error("Error occurred when sending the request", e);
-//                    retriesLeft--;
-//                }
-//            }
-//
-//        }
-//
-//        logger.debug("broadcast to all entries in the routing table complete");
-//
-//
-//
-//    }
-//
-//    private String buildNewNodeEntry(){
-//        return NEW_NODE_ENTRY + " " + node.getUsername() + " " + node.getIpAddress() + " " + String.valueOf(node.getPort());
-//    }
+    //    @Override
+    //    public void broadcast(String nodeName , DatagramPacket datagramPacket) {
+    //
+    //        String request = buildNewNodeEntry();
+    //
+    //        Set<RoutingTable.RoutingTableEntry> routingEntries = node.getRoutingTable().getEntries();
+    //        for (RoutingTable.RoutingTableEntry entry: routingEntries) {
+    //
+    //            int retriesLeft = numOfRetries;
+    //            while (retriesLeft > 0) {
+    //                try (DatagramSocket datagramSocket = createDatagramSocket()) {
+    //                    String response = RequestUtils.sendRequest(datagramSocket, request, entry.getAddress().getAddress(),
+    //                            entry.getPort());
+    //                    logger.debug("Response received : {}", response);
+    //                } catch (IOException e) {
+    //                    logger.error("Error occurred when sending the request", e);
+    //                    retriesLeft--;
+    //                }
+    //            }
+    //
+    //        }
+    //
+    //        logger.debug("broadcast to all entries in the routing table complete");
+    //
+    //
+    //
+    //    }
+    //
+    //    private String buildNewNodeEntry(){
+    //        return NEW_NODE_ENTRY + " " + node.getUsername() + " " + node.getIpAddress() + " " + String.valueOf(node.getPort());
+    //    }
 
-//    private void addPeer(String ipAddress, int port) throws UnknownHostException {
-//        this.node.addPeer(new InetSocketAddress(ipAddress , port));
-//    }
+    //    private void addPeer(String ipAddress, int port) throws UnknownHostException {
+    //        this.node.addPeer(new InetSocketAddress(ipAddress , port));
+    //    }
 
-    public void stop(){
+    public void stop() {
 
         if (started) {
             started = false;

@@ -20,9 +20,10 @@ public class Constants {
 
     /** REG ${ip} ${port} ${username} */
     public static final String REG_MSG_FORMAT = "REG %s %d %s";
-
     /** UNREG ${ip} ${port} ${username} */
     public static final String UNREG_MSG_FORMAT = "UNREG %s %d %s";
+    /** NEWNODE ${ip} ${port} ${nodeId} */
+    public static final String NEWNODE_MSG_FORMAT = "NEWNODE %s %d %d";
 
     /** Message format to be used when sending a request to the bootstrap server. ${length} ${msg} */
     public static final String MSG_FORMAT = "%04d %s";
@@ -33,6 +34,6 @@ public class Constants {
     public static final String GETROUTINGTABLE = "GETRT";
     public static final String BROADCAST = "BCAST";
     public static final String HANDOVER = "HNDVR";
-    public static final String NEW_NODE_ENTRY = "newNodeEntry";
+    public static final String NEW_NODE_ENTRY = "NEWNODE";
     public static final String RESPONSE_OK = "ok";
 }

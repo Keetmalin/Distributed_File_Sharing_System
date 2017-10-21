@@ -1,7 +1,5 @@
 package org.uom.cse.distributed.peer;
 
-import java.net.InetSocketAddress;
-
 /**
  * This class represents the entry to be stored inside the entry table
  *
