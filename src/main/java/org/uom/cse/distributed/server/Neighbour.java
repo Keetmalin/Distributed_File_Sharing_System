@@ -2,8 +2,9 @@ package org.uom.cse.distributed.server;
 
 /**
  * A bean to represent a node in the distributed network. {@link BootstrapServer} uses this.
- * <p>
+ *
  * Taken from CS4262 course CSE
+ * Provided by Dilum Bandara and Anura P. Jayasumana
  */
 class Neighbour {
     private String ip;
