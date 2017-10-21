@@ -120,6 +120,10 @@ public class Node {
         return ipAddress;
     }
 
+    public RoutingTable getRoutingTable() {
+        return routingTable;
+    }
+
     public List<InetSocketAddress> getPeers() {
         return peers;
     }
