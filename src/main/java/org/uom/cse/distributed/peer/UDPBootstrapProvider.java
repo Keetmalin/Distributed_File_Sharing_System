@@ -37,7 +37,7 @@ public class UDPBootstrapProvider implements BootstrapProvider {
 
 
     public UDPBootstrapProvider() {
-        this(10000 + new Random().nextInt(65536));
+        this(10000 + new Random().nextInt(55536));
     }
 
     public UDPBootstrapProvider(int udpPort) {
