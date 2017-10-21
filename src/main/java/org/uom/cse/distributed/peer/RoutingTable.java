@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
  *     <ul>
  *         <li>IP Address</li>
  *         <li>Port</li>
- *         <li>Node Name</li>
+ *         <li>Node Name - This is a number which indicates the location in the DHT</li>
  *     </ul>
  * </pre>
  *

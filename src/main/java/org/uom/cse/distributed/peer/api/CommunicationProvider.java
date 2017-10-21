@@ -14,7 +14,7 @@ import java.util.List;
  *
  * @author Imesha Sudasingha
  */
-public interface CommunicationProvider {
+public abstract class CommunicationProvider {
 
     /**
      * Connects to the peer given by the IP and port. The peer will (hopefully) return the routing table of that node.
@@ -23,12 +23,12 @@ public interface CommunicationProvider {
      * @param peer {@link InetSocketAddress} of the peer we are connecting
      * @return List of routing table entries of the peer.
      */
-    List<RoutingTable.Entry> connect(InetSocketAddress peer);
+    public abstract List<RoutingTable.Entry> connect(InetSocketAddress peer);
 
     /**
      * Disconnects from the given peer after notifying that node that I'm disconnecting.
      *
      * @param peer peer from which I'm going to disconnect from
      */
-    boolean disconnect(InetSocketAddress peer);
+    public abstract boolean disconnect(InetSocketAddress peer);
 }

@@ -79,7 +79,6 @@ public class Node {
         logger.info("Successfully connected to the network and created routing table");
     }
 
-
     public void stop() {
         logger.debug("Stopping node");
         if (stateManager.getState().compareTo(REGISTERED) >= 0) {

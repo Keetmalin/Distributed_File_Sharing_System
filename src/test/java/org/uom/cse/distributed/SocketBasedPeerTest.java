@@ -9,7 +9,7 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.uom.cse.distributed.peer.Node;
-import org.uom.cse.distributed.peer.SocketBasedCommunicationProvider;
+import org.uom.cse.distributed.peer.communication.SocketBasedCommunicationProvider;
 import org.uom.cse.distributed.peer.api.State;
 import org.uom.cse.distributed.server.BootstrapServer;
 
