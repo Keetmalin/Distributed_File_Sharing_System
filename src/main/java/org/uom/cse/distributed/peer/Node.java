@@ -11,20 +11,11 @@ import org.uom.cse.distributed.peer.utils.HashUtils;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Random;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.uom.cse.distributed.Constants.ADDRESSES_PER_CHARACTER;
-import static org.uom.cse.distributed.Constants.ADDRESS_SPACE_SIZE;
+import static org.uom.cse.distributed.Constants.*;
 import static org.uom.cse.distributed.peer.api.State.CONFIGURED;
 import static org.uom.cse.distributed.peer.api.State.CONNECTED;
 import static org.uom.cse.distributed.peer.api.State.IDLE;
@@ -183,13 +174,25 @@ public class Node {
     }
 
     /**
-     * Returns the list of file available in my node.
+     * Generates and Returns the list of files available in my node.
+     * 3 to 5 files in each node
      *
      * @return List of files available in my node.
      */
     private List<String> getMyFiles() {
-        return Arrays.asList("Windows XP", "Harry Potter", "Kung Fu Panda");
+        if (myFiles.size() == 0) {
+            //randomly decide the file count to be 3 to 5 files
+            Random random = new Random();
+            int fileCount = random.nextInt((MAX_FILE_COUNT - MIN_FILE_COUNT) + 1) + MIN_FILE_COUNT;
+
+            List<String> tempList = Arrays.asList(FILE_NAME_ARRAY);
+            Collections.shuffle(tempList);
+            return tempList.subList(0, fileCount);
+        }
+        return myFiles;
     }
+
+
 
     public void stop() {
         logger.debug("Stopping node");
