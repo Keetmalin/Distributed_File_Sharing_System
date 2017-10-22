@@ -8,6 +8,7 @@ package org.uom.cse.distributed.peer;
 public class EntryTableEntry {
 
     private String word;
+    private String file;
     private String nodeName;
 
     public EntryTableEntry(String word, String nodeName) {

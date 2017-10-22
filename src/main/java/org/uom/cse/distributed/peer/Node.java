@@ -141,7 +141,7 @@ public class Node {
                 // Usually an entry should be present.
                 if (entry.isPresent()) {
                     logger.info("Offering keyword ({}-{}) to Node - {}", keyword, file, entry.get());
-                    communicationProvider.offerFile(entry.get().getAddress(), keyword, file);
+                    communicationProvider.offerFile(entry.get().getAddress(), keyword, String.valueOf(this.nodeId), file);
                 } else {
                     // I should take over this file name
                     logger.info("I'm indexing ({}-{})", keyword, file);

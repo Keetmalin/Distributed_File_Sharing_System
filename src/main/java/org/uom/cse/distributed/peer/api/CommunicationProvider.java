@@ -55,7 +55,8 @@ public abstract class CommunicationProvider {
      *
      * @param peer    Owner who indexes that keyword
      * @param keyword keyword to be send
+     * @param node    name of node that contains the file
      * @param file    file name to be sent
      */
-    public abstract void offerFile(InetSocketAddress peer, String keyword, String file);
+    public abstract void offerFile(InetSocketAddress peer, String keyword, String node, String file);
 }

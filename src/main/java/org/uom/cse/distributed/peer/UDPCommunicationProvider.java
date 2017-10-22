@@ -80,8 +80,10 @@ public class UDPCommunicationProvider extends CommunicationProvider {
     }
 
     @Override
-    public void offerFile(InetSocketAddress peer, String keyword, String file) {
+    public void offerFile(InetSocketAddress peer, String keyword, String node , String file ){
 
+        String request = keyword + " " + node + " " + file;
+        retryOrTimeout( request , peer);
     }
 
     /**
