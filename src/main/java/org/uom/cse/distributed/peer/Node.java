@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.uom.cse.distributed.peer.api.BootstrapProvider;
 import org.uom.cse.distributed.peer.api.CommunicationProvider;
+import org.uom.cse.distributed.peer.api.Server;
 import org.uom.cse.distributed.peer.api.State;
 import org.uom.cse.distributed.peer.api.StateManager;
 import org.uom.cse.distributed.peer.utils.HashUtils;
@@ -45,6 +46,7 @@ public class Node {
     private final List<String> myFiles = new ArrayList<>();
 
     private final CommunicationProvider communicationProvider;
+    private final Server server;
     private final String username;
     private final String ipAddress;
     private final int port;
@@ -53,26 +55,30 @@ public class Node {
     private BootstrapProvider bootstrapProvider = new UDPBootstrapProvider();
 
     public Node(int port) {
-        this(port, new UDPCommunicationProvider());
+        this(port, new UDPCommunicationProvider(), new UDPServer(port));
     }
 
-    public Node(int port, CommunicationProvider communicationProvider) {
-        this(port, "localhost", communicationProvider);
+    public Node(int port, CommunicationProvider communicationProvider, Server server) {
+        this(port, "localhost", communicationProvider, server);
     }
 
-    public Node(int port, String ipAddress, CommunicationProvider communicationProvider) {
-        this(port, ipAddress, UUID.randomUUID().toString(), communicationProvider);
+    public Node(int port, String ipAddress, CommunicationProvider communicationProvider, Server server) {
+        this(port, ipAddress, UUID.randomUUID().toString(), communicationProvider, server);
     }
 
-    public Node(int port, String ipAddress, String username, CommunicationProvider communicationProvider) {
+    public Node(int port, String ipAddress, String username, CommunicationProvider communicationProvider, Server server) {
         this.port = port;
         this.ipAddress = ipAddress;
         this.username = username;
         this.communicationProvider = communicationProvider;
+        this.server = server;
     }
 
     public void start() {
         stateManager.checkState(State.IDLE);
+
+        server.start(this);
+        communicationProvider.start();
 
         // 1. Register and fetch 2 random peers from Bootstrap Server
         logger.debug("Registering node");
@@ -213,6 +219,8 @@ public class Node {
             }
         }
 
+        communicationProvider.stop();
+        server.stop();
         stateManager.setState(IDLE);
         logger.info("Distributed node stopped");
     }

@@ -13,6 +13,7 @@ public class Constants {
 
     /** How many times a given UDP request be retried */
     public static final int RETRIES_COUNT = 3;
+    public static final int RETRY_TIMEOUT_MS = 5000;
 
     public static final int ADDRESS_SPACE_SIZE = 180;
     public static final int CHARACTER_SPACE_SIZE = 36;
@@ -30,10 +31,21 @@ public class Constants {
     public static final String REGOK = "REGOK";
     public static final String UNROK = "UNROK";
 
-    /** Message format to be used in Client Server Communications **/
-    public static final String GETROUTINGTABLE = "GETRT";
-    public static final String BROADCAST = "BCAST";
+    /** Message commands to be used in client server communications **/
+    public static final String GET_ROUTING_TABLE = "GETRTBL";
+    public static final String JOIN = "BCAST";
     public static final String HANDOVER = "HNDVR";
     public static final String NEW_NODE_ENTRY = "NEWNODE";
     public static final String RESPONSE_OK = "ok";
+
+    /**
+     * This will return the expected response of any command. For example, <strong>GETRTBL</strong>'s response will look
+     * like <strong>GETRTBLOK</strong>
+     *
+     * @param command Original command sent by client
+     * @return command suffixed with OK
+     */
+    public static String getOkCommand(String command) {
+        return command + "OK";
+    }
 }

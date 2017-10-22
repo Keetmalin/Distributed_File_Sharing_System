@@ -9,14 +9,12 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
-import java.net.SocketException;
-import java.util.Random;
 import java.util.StringTokenizer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import static org.uom.cse.distributed.Constants.BROADCAST;
-import static org.uom.cse.distributed.Constants.GETROUTINGTABLE;
+import static org.uom.cse.distributed.Constants.GET_ROUTING_TABLE;
+import static org.uom.cse.distributed.Constants.JOIN;
 import static org.uom.cse.distributed.Constants.RESPONSE_OK;
 import static org.uom.cse.distributed.Constants.RETRIES_COUNT;
 
@@ -25,48 +23,47 @@ import static org.uom.cse.distributed.Constants.RETRIES_COUNT;
  * Network
  *
  * @author Keet Sugathadasa
+ * @author Imesha Sudasingha
  */
 public class UDPServer implements Server {
 
-    private ExecutorService executorService;
     private static final Logger logger = LoggerFactory.getLogger(Node.class);
-    private final Node node;
-    private boolean started = false;
-    private final int numOfRetries = RETRIES_COUNT;
 
-    public UDPServer(Node node) {
-        this.node = node;
-        this.started = true;
+    private final int numOfRetries = RETRIES_COUNT;
+    private ExecutorService executorService;
+    private boolean started = false;
+    private final int port;
+
+    private Node node;
+
+    public UDPServer(int port) {
+        this.port = port;
     }
 
-    public void start() {
+    public void start(Node node) {
         if (started) {
             logger.warn("Listener already running");
             return;
         }
 
-        started = true;
+        this.node = node;
+
         executorService = Executors.newSingleThreadExecutor();
         executorService.submit(() -> {
             try {
                 listen();
             } catch (Exception e) {
-                e.printStackTrace();
+                logger.error("Error occurred when listening", e);
             }
         });
 
+        started = true;
         Runtime.getRuntime().addShutdownHook(new Thread(this::stop));
     }
 
     @Override
     public void listen() {
-
-        DatagramSocket datagramSocket = null;
-        String incomingMsg;
-
-
-        try {
-            datagramSocket = new DatagramSocket(this.node.getPort());
+        try (DatagramSocket datagramSocket = new DatagramSocket(port)) {
             logger.debug("Node is Listening to incoming requests");
 
             while (started) {
@@ -75,31 +72,28 @@ public class UDPServer implements Server {
                 datagramSocket.receive(incoming);
 
                 byte[] data = incoming.getData();
-                incomingMsg = new String(data, 0, incoming.getLength());
+                String incomingMsg = new String(data, 0, incoming.getLength());
 
                 //log the details of the incoming message
-                logger.debug(incoming.getAddress().getHostAddress() + " : " + incoming.getPort() + " - "
-                        + incomingMsg);
+                logger.debug("Received from {}:{} - {}", incoming.getAddress(), incoming.getPort(), incomingMsg);
 
                 StringTokenizer st = new StringTokenizer(incomingMsg, " ");
-                //every incoming message comes with REQUEST + NODENAME
 
-                String request = st.nextToken();
-                String nodeName = st.nextToken();
+                logger.debug("Request length: {}", st.nextToken());
+                String command = st.nextToken();
+                logger.debug("Command: {}", command);
 
-                if (GETROUTINGTABLE.equals(request)) {
+                if (GET_ROUTING_TABLE.equals(command)) {
                     provideRoutingTable(incoming);
-                } else if (BROADCAST.equals(request)) {
+                } else if (JOIN.equals(command)) {
                     String ipAddress = st.nextToken();
                     int port = Integer.parseInt(st.nextToken());
-                    handleBroadcastRequest(nodeName, incoming, ipAddress, port);
+                    //                    handleBroadcastRequest(nodeName, incoming, ipAddress, port);
                 }
-
-
             }
-
         } catch (IOException e) {
             logger.error("Error occurred when listening on Port", e);
+            throw new IllegalStateException("Unable to start server", e);
         }
     }
 
@@ -111,20 +105,17 @@ public class UDPServer implements Server {
 
     @Override
     public void provideRoutingTable(DatagramPacket incoming) {
-
         int retriesLeft = numOfRetries;
         while (retriesLeft > 0) {
-
-            try (DatagramSocket datagramSocket = createDatagramSocket()) {
+            try (DatagramSocket datagramSocket = new DatagramSocket()) {
                 RequestUtils.sendObjectRequest(datagramSocket, this.node.getRoutingTable().getEntries(),
                         incoming.getAddress(), incoming.getPort());
-                logger.debug("Routing table entries provided to the recipient");
-
+                logger.debug("Routing table entries provided to the recipient: {}", incoming.getAddress(), incoming.getPort());
+                break;
             } catch (IOException e) {
                 logger.error("Error occurred when sending the response", e);
                 retriesLeft--;
             }
-
         }
     }
 
@@ -138,11 +129,10 @@ public class UDPServer implements Server {
 
         int retriesLeft = numOfRetries;
         while (retriesLeft > 0) {
-
-            try (DatagramSocket datagramSocket = createDatagramSocket()) {
+            try (DatagramSocket datagramSocket = new DatagramSocket()) {
                 //TODO Return files belonging to that node
-                RequestUtils.sendResponse(datagramSocket, RESPONSE_OK,
-                        datagramPacket.getAddress(), datagramPacket.getPort());
+                RequestUtils.sendResponse(datagramSocket, RESPONSE_OK, datagramPacket.getAddress(),
+                        datagramPacket.getPort());
                 logger.debug("Response Ok sent to the recipient");
 
             } catch (IOException e) {
@@ -153,12 +143,6 @@ public class UDPServer implements Server {
         }
 
 
-    }
-
-    private DatagramSocket createDatagramSocket() throws SocketException {
-        int port = this.node.getPort() + new Random().nextInt(55536);
-        logger.debug("Creating Datagram Socket at port : {}", port);
-        return new DatagramSocket(port);
     }
 
     //    @Override
@@ -198,7 +182,6 @@ public class UDPServer implements Server {
     //    }
 
     public void stop() {
-
         if (started) {
             started = false;
             executorService.shutdownNow();

@@ -5,16 +5,25 @@ import org.slf4j.LoggerFactory;
 import org.uom.cse.distributed.peer.api.CommunicationProvider;
 import org.uom.cse.distributed.peer.utils.RequestUtils;
 
-import java.io.IOException;
-import java.net.DatagramPacket;
+import java.io.ByteArrayInputStream;
+import java.io.ObjectInputStream;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
+import static org.uom.cse.distributed.Constants.GET_ROUTING_TABLE;
 import static org.uom.cse.distributed.Constants.NEWNODE_MSG_FORMAT;
 import static org.uom.cse.distributed.Constants.RETRIES_COUNT;
+import static org.uom.cse.distributed.Constants.RETRY_TIMEOUT_MS;
 
 /**
  * Provides UDP Socket Based communication with Peers
@@ -25,34 +34,34 @@ public class UDPCommunicationProvider extends CommunicationProvider {
 
     private static final Logger logger = LoggerFactory.getLogger(Node.class);
     private final int numOfRetries = RETRIES_COUNT;
+    private ExecutorService executorService;
 
+    public void start() {
+        executorService = Executors.newCachedThreadPool();
+        logger.info("Communication provider started");
+    }
+
+    @SuppressWarnings("unchecked")
     @Override
     public Set<RoutingTableEntry> connect(InetSocketAddress peer) {
-
-        try (DatagramSocket datagramSocket = new DatagramSocket()) {
-            String msg = messageBuilder("GETTable");
-
-            DatagramPacket datagramPacket = new DatagramPacket(msg.getBytes(), msg.length(), peer.getAddress(),
-                    peer.getPort());
-            datagramSocket.send(datagramPacket);
-            logger.debug("Request sent to Peer node: {}", msg);
-
-            //start listening to Bootstrap Server Response
-            byte[] buffer = new byte[65536];
-            DatagramPacket incoming = new DatagramPacket(buffer, buffer.length);
-            datagramSocket.receive(incoming);
-
-            String responseMsg = new String(incoming.getData(), 0, incoming.getLength());
-            logger.debug(responseMsg);
-            datagramSocket.close();
-        } catch (IOException e) {
-            logger.error("Error occurred when connecting to node : {}", peer);
+        String request = RequestUtils.buildRequest(GET_ROUTING_TABLE);
+        logger.debug("Sending request ({}) to get routing table from {}", request, peer);
+        String response = retryOrTimeout(request, peer);
+        logger.debug("Received response : {}", response);
+        if (response != null) {
+            byte[] received = Base64.getDecoder().decode(response);
+            ByteArrayInputStream bais = new ByteArrayInputStream(received);
+            try (ObjectInputStream in = new ObjectInputStream(bais)) {
+                Object obj = in.readObject();
+                logger.debug("Received routing table entries. {} - {}", obj.getClass(), obj);
+                return (HashSet<RoutingTableEntry>) obj;
+            } catch (Exception e) {
+                logger.error("Error occurred when obtaining routing table", e);
+            }
         }
 
-        //build message to send to peer
-
-        logger.debug("connecting to peer");
-        return null;
+        // If failed we return an empty set to not to break operations.
+        return new HashSet<>();
     }
 
     @Override
@@ -62,20 +71,12 @@ public class UDPCommunicationProvider extends CommunicationProvider {
 
     @Override
     public Map<String, Map<String, List<Integer>>> notifyNewNode(InetSocketAddress peer, InetSocketAddress me, int nodeId) {
-        String request = String.format(NEWNODE_MSG_FORMAT, me.getHostName(), me.getPort(), nodeId);
+        String msg = String.format(NEWNODE_MSG_FORMAT, me.getHostName(), me.getPort(), nodeId);
+        String request = RequestUtils.buildRequest(msg);
         logger.debug("Notifying new node to {} as message: {}", peer, request);
-
-        int retriesLeft = numOfRetries;
-        while (retriesLeft > 0) {
-            try (DatagramSocket datagramSocket = new DatagramSocket()) {
-                String response = RequestUtils.sendRequest(datagramSocket, request, peer.getAddress(), peer.getPort());
-                logger.debug("Response received : {}", response);
-            } catch (IOException e) {
-                logger.error("Error occurred when sending the request", e);
-                retriesLeft--;
-            }
-        }
-        return null;
+        String response = retryOrTimeout(request, peer);
+        logger.debug("Received response : {}", response);
+        return new HashMap<>();
     }
 
     @Override
@@ -83,7 +84,40 @@ public class UDPCommunicationProvider extends CommunicationProvider {
 
     }
 
-    private String messageBuilder(String request) {
-        return request;
+    /**
+     * This method retries a given requests or times out of that request fails. Tries for maximum of {@link
+     * UDPCommunicationProvider#numOfRetries}
+     *
+     * @param request request to be sent
+     * @param peer    to whom the request is sent
+     * @return null | response
+     */
+    private String retryOrTimeout(String request, InetSocketAddress peer) {
+        int retriesLeft = numOfRetries;
+        while (retriesLeft > 0) {
+            Future<String> task = executorService.submit(() -> {
+                try (DatagramSocket datagramSocket = new DatagramSocket()) {
+                    return RequestUtils.sendRequest(datagramSocket, request, peer.getAddress(), peer.getPort());
+                }
+            });
+
+            try {
+                return task.get(RETRY_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+            } catch (Exception e) {
+                logger.error("Error occurred when completing request({}) to peer- {}. Error: {}", request, peer, e.getMessage());
+                task.cancel(true);
+                retriesLeft--;
+            }
+        }
+
+        return null;
+    }
+
+    public void stop() {
+        if (executorService != null) {
+            executorService.shutdownNow();
+            executorService = null;
+        }
+        logger.info("Communication provider stopped");
     }
 }

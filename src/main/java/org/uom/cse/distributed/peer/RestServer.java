@@ -3,17 +3,25 @@ package org.uom.cse.distributed.peer;
 import org.uom.cse.distributed.peer.api.Server;
 
 import java.net.DatagramPacket;
-import java.net.DatagramSocket;
 
 /**
- * This Class provides the implementation of the server side, of each
- * of the nodes.
+ * This Class provides the implementation of the server side, of each of the nodes.
  *
  * @author Vithusha Aarabhi
  * @author Jayan Vidanapathirana
  */
-public class RestServer implements Server{
+public class RestServer implements Server {
 
+
+    @Override
+    public void start(Node node) {
+
+    }
+
+    @Override
+    public void stop() {
+
+    }
 
     @Override
     public void listen() {

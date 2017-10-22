@@ -18,6 +18,10 @@ import java.util.Set;
  */
 public abstract class CommunicationProvider {
 
+    public abstract void start();
+
+    public abstract void stop();
+
     /**
      * Connects to the peer given by the IP and port. The peer will (hopefully) return the routing table of that node.
      * This method will return the list of routing table entries received from the peer.

@@ -19,7 +19,6 @@ import java.util.Random;
 
 import static org.uom.cse.distributed.Constants.BOOTSTRAP_IP;
 import static org.uom.cse.distributed.Constants.BOOTSTRAP_PORT;
-import static org.uom.cse.distributed.Constants.MSG_FORMAT;
 import static org.uom.cse.distributed.Constants.REG_MSG_FORMAT;
 import static org.uom.cse.distributed.Constants.RETRIES_COUNT;
 
@@ -49,7 +48,7 @@ public class UDPBootstrapProvider implements BootstrapProvider {
     @Override
     public List<InetSocketAddress> register(String ipAddress, int port, String username) throws SocketException {
         String msg = String.format(REG_MSG_FORMAT, ipAddress, port, username);
-        String request = String.format(MSG_FORMAT, msg.length(), msg);
+        String request = RequestUtils.buildRequest(msg);
 
         int retriesLeft = numOfRetries;
         while (retriesLeft > 0) {
@@ -78,7 +77,7 @@ public class UDPBootstrapProvider implements BootstrapProvider {
         logger.debug("Unregistering node");
 
         String msg = String.format(Constants.UNREG_MSG_FORMAT, ipAddress, port, username);
-        String request = String.format(Constants.MSG_FORMAT, msg.length(), msg);
+        String request = RequestUtils.buildRequest(msg);
 
         int retriesLeft = numOfRetries;
         while (retriesLeft > 0) {

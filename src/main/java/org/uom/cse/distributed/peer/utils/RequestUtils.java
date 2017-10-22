@@ -15,6 +15,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.StringTokenizer;
 
@@ -59,21 +60,21 @@ public class RequestUtils {
      * @throws IOException sending failures
      */
     public static void sendObjectRequest(DatagramSocket datagramSocket, Object requestObject,
-                                     InetAddress address, int port) throws IOException {
-        logger.debug("Sending request Object: to recipient");
+            InetAddress address, int port) throws IOException {
+        logger.debug("Sending request Object to recipient {}:{}", address, port);
 
         //create a Byte Stream out of the object
-        final ByteArrayOutputStream baos = new ByteArrayOutputStream(6400);
-        final ObjectOutputStream oos = new ObjectOutputStream(baos);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream(6400);
+        ObjectOutputStream oos = new ObjectOutputStream(baos);
         oos.writeObject(requestObject);
-        final byte[] data = baos.toByteArray();
+        String base64 = Base64.getEncoder().encodeToString(baos.toByteArray());
+        byte[] data = base64.getBytes();
 
         // Create a datagram packet to send to the recipient
         DatagramPacket datagramPacket = new DatagramPacket(data, data.length, address, port);
         // Send to recipient
         datagramSocket.send(datagramPacket);
-        logger.debug("Datagram packet sent, listening for response");
-
+        logger.debug("Datagram packet sent to recipient {}:{}", address, port);
     }
 
 
@@ -84,7 +85,7 @@ public class RequestUtils {
      * @throws IOException sending failures
      */
     public static void sendResponse(DatagramSocket datagramSocket, String response,
-                                         InetAddress address, int port) throws IOException {
+            InetAddress address, int port) throws IOException {
         logger.debug("Sending response to recipient");
 
         // Create a datagram packet to send to the recipient
@@ -176,6 +177,16 @@ public class RequestUtils {
             default:
                 return false;
         }
+    }
+
+    /**
+     * Builds the message to the format <pre>%4d %s</pre> which will be the actual request sent to the server
+     *
+     * @param request Request to be included in the message
+     * @return formatted message
+     */
+    public static String buildRequest(String request) {
+        return String.format(Constants.MSG_FORMAT, request.length() + 5, request);
     }
 
 }
