@@ -20,10 +20,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import static org.uom.cse.distributed.Constants.GET_ROUTING_TABLE;
-import static org.uom.cse.distributed.Constants.NEWNODE_MSG_FORMAT;
-import static org.uom.cse.distributed.Constants.RETRIES_COUNT;
-import static org.uom.cse.distributed.Constants.RETRY_TIMEOUT_MS;
+import static org.uom.cse.distributed.Constants.*;
 
 /**
  * Provides UDP Socket Based communication with Peers
@@ -82,7 +79,7 @@ public class UDPCommunicationProvider extends CommunicationProvider {
     @Override
     public void offerFile(InetSocketAddress peer, String keyword, String node , String file ){
 
-        String request = keyword + " " + node + " " + file;
+        String request = NEW_ENTRY + " " + keyword + " " + node + " " + file;
         retryOrTimeout( request , peer);
     }
 
@@ -104,6 +101,7 @@ public class UDPCommunicationProvider extends CommunicationProvider {
             });
 
             try {
+                //TODO fix this - it retries for 3 times always
                 return task.get(RETRY_TIMEOUT_MS, TimeUnit.MILLISECONDS);
             } catch (Exception e) {
                 logger.error("Error occurred when completing request({}) to peer- {}. Error: {}", request, peer, e.getMessage());

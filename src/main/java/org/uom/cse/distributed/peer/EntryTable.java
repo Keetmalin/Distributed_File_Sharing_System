@@ -29,6 +29,7 @@ public class EntryTable {
     }
 
     public void addEntry(EntryTableEntry entryTableEntry) {
+        //TODO check for duplicate entries
         List<EntryTableEntry> duplicates = this.entries.stream()
                 .filter(e -> e.getWord().equals(entryTableEntry.getWord()))
                 .collect(Collectors.toList());

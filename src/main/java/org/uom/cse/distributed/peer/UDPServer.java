@@ -13,10 +13,7 @@ import java.util.StringTokenizer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import static org.uom.cse.distributed.Constants.GET_ROUTING_TABLE;
-import static org.uom.cse.distributed.Constants.JOIN;
-import static org.uom.cse.distributed.Constants.RESPONSE_OK;
-import static org.uom.cse.distributed.Constants.RETRIES_COUNT;
+import static org.uom.cse.distributed.Constants.*;
 
 /**
  * This class implements the server side listening and handling of requests Via UDP - for each node in the Distributed
@@ -40,6 +37,7 @@ public class UDPServer implements Server {
         this.port = port;
     }
 
+    @Override
     public void start(Node node) {
         if (started) {
             logger.warn("Listener already running");
@@ -77,17 +75,21 @@ public class UDPServer implements Server {
                 //log the details of the incoming message
                 logger.debug("Received from {}:{} - {}", incoming.getAddress(), incoming.getPort(), incomingMsg);
 
-                StringTokenizer st = new StringTokenizer(incomingMsg, " ");
+                String[] incomingResult = incomingMsg.split(" " , 2);
 
-                logger.debug("Request length: {}", st.nextToken());
-                String command = st.nextToken();
+                logger.debug("Request length: {}", incomingResult.length);
+                String command = incomingResult[0];
                 logger.debug("Command: {}", command);
 
                 if (GET_ROUTING_TABLE.equals(command)) {
                     provideRoutingTable(incoming);
-                } else if (JOIN.equals(command)) {
-                    String ipAddress = st.nextToken();
-                    int port = Integer.parseInt(st.nextToken());
+                } else if (NEW_ENTRY.equals(command)){
+                    String[] tempList = incomingResult[1].split(" " , 3);
+                    this.node.getEntryTable().addEntry(new EntryTableEntry(tempList[0] , tempList[1] , tempList[2]));
+                }
+                else if (JOIN.equals(command)) {
+                    //String ipAddress = st.nextToken();
+                    //int port = Integer.parseInt(st.nextToken());
                     //                    handleBroadcastRequest(nodeName, incoming, ipAddress, port);
                 }
             }

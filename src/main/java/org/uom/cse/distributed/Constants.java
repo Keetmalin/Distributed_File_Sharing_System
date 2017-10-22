@@ -36,6 +36,7 @@ public class Constants {
     /** Message commands to be used in client server communications **/
     public static final String GET_ROUTING_TABLE = "GETRTBL";
     public static final String JOIN = "BCAST";
+    public static final String NEW_ENTRY= "NEWENTRY";
     public static final String HANDOVER = "HNDVR";
     public static final String NEW_NODE_ENTRY = "NEWNODE";
     public static final String RESPONSE_OK = "ok";

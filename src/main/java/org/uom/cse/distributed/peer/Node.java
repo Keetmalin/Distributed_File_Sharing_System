@@ -33,6 +33,7 @@ public class Node {
 
     private final StateManager stateManager = new StateManager(IDLE);
     private final RoutingTable routingTable = new RoutingTable();
+    private final EntryTable entryTable = new EntryTable();
     private final Map<String, Map<String, List<Integer>>> fileMappings = new HashMap<>();
     private final List<String> myFiles = new ArrayList<>();
 
@@ -242,6 +243,10 @@ public class Node {
 
     public RoutingTable getRoutingTable() {
         return routingTable;
+    }
+
+    public EntryTable getEntryTable() {
+        return entryTable;
     }
 
     public State getState() {
