@@ -71,7 +71,8 @@ public class UDPCommunicationProvider extends CommunicationProvider {
 
     @SuppressWarnings("unchecked")
     @Override
-    public Map<Character, Map<String, List<EntryTableEntry>>> notifyNewNode(InetSocketAddress peer, InetSocketAddress me, int nodeId) {
+    public Map<Character, Map<String, List<EntryTableEntry>>> notifyNewNode(InetSocketAddress peer,
+            InetSocketAddress me, int nodeId) {
         String msg = String.format(NEWNODE_MSG_FORMAT, me.getHostName(), me.getPort(), nodeId);
         String request = RequestUtils.buildRequest(msg);
         logger.debug("Notifying new node to {} as message: {}", peer, request);

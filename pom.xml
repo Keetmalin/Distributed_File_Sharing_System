@@ -17,13 +17,14 @@
 
     <dependencyManagement>
         <dependencies>
-            <!-- JUnit -->
+            <!-- TestNG -->
             <dependency>
-                <groupId>junit</groupId>
-                <artifactId>junit</artifactId>
-                <version>${junit.version}</version>
+                <groupId>org.testng</groupId>
+                <artifactId>testng</artifactId>
+                <version>${testng.version}</version>
                 <scope>test</scope>
             </dependency>
+
 
             <!-- Logging -->
             <dependency>
@@ -45,10 +46,10 @@
     </dependencyManagement>
 
     <dependencies>
-        <!-- JUnit -->
+        <!-- TestNG -->
         <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
+            <groupId>org.testng</groupId>
+            <artifactId>testng</artifactId>
         </dependency>
 
         <!-- Logging -->
@@ -81,6 +82,6 @@
     <properties>
         <slf4j.version>1.7.25</slf4j.version>
         <log4j2.version>2.8.2</log4j2.version>
-        <junit.version>4.12</junit.version>
+        <testng.version>6.11</testng.version>
     </properties>
 </project>

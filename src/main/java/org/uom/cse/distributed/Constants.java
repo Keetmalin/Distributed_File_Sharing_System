@@ -14,6 +14,7 @@ public class Constants {
     /** How many times a given UDP request be retried */
     public static final int RETRIES_COUNT = 3;
     public static final int RETRY_TIMEOUT_MS = 5000;
+    public static final int GRACE_PERIOD_MS = 5000;
 
     public static final int ADDRESS_SPACE_SIZE = 36;
     public static final int CHARACTER_SPACE_SIZE = 36;

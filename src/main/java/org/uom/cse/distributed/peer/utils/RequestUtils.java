@@ -105,15 +105,17 @@ public class RequestUtils {
 
         int code = Integer.parseInt(st.nextToken());
 
-        List<InetSocketAddress> peers = new ArrayList<>();
+        List<InetSocketAddress> peers = null;
 
         switch (code) {
             case 0:
                 logger.info("Successful - No nodes in the network yet");
+                peers = new ArrayList<>();
                 break;
             case 1:
             case 2:
                 logger.info("Successful - Found 1/2 other nodes in the network");
+                peers = new ArrayList<>();
                 while (st.hasMoreTokens()) {
                     peers.add(new InetSocketAddress(st.nextToken(), Integer.parseInt(st.nextToken())));
                 }

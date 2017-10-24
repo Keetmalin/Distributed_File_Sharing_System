@@ -14,12 +14,16 @@ import org.uom.cse.distributed.peer.utils.HashUtils;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.uom.cse.distributed.Constants.ADDRESSES_PER_CHARACTER;
 import static org.uom.cse.distributed.Constants.ADDRESS_SPACE_SIZE;
 import static org.uom.cse.distributed.Constants.FILE_NAME_ARRAY;
+import static org.uom.cse.distributed.Constants.GRACE_PERIOD_MS;
 import static org.uom.cse.distributed.Constants.MAX_FILE_COUNT;
 import static org.uom.cse.distributed.Constants.MIN_FILE_COUNT;
 import static org.uom.cse.distributed.peer.api.State.CONFIGURED;
@@ -41,15 +45,16 @@ public class Node {
     private final RoutingTable routingTable = new RoutingTable();
     private final EntryTable entryTable = new EntryTable();
     private final List<String> myFiles = new ArrayList<>();
+    private final UDPQuery udpQuery = new UDPQuery();
 
     private final CommunicationProvider communicationProvider;
-    private final UDPQuery udpQuery = new UDPQuery();
     private final Server server;
     private final String username;
     private final String ipAddress;
     private final int port;
     private int nodeId;
     private char myChar;
+    private ScheduledExecutorService executorService;
 
     private BootstrapProvider bootstrapProvider = new UDPBootstrapProvider();
 
@@ -76,38 +81,32 @@ public class Node {
     public void start() {
         stateManager.checkState(State.IDLE);
 
+        executorService = Executors.newScheduledThreadPool(2);
+
         server.start(this);
         communicationProvider.start();
         udpQuery.initialize(this);
 
-        // 1. Register and fetch 2 random peers from Bootstrap Server
-        logger.debug("Registering node");
-        List<InetSocketAddress> peers;
-        try {
-            peers = bootstrapProvider.register(ipAddress, port, username);
-        } catch (IOException e) {
-            logger.error("Error occurred when registering node", e);
-            throw new IllegalStateException("Unable to register this node", e);
+        logger.debug("Connecting to the distributed network");
+        while (!stateManager.isState(CONNECTED)) {
+            if (stateManager.isState(REGISTERED)) {
+                unregister();
+            }
+
+            List<InetSocketAddress> peers = register();
+
+            if (stateManager.isState(REGISTERED)) {
+                Set<RoutingTableEntry> entries = connect(peers);
+
+                // peer size become 0 only when we registered successfully
+                if (peers.size() == 0 || entries.size() > 0) {
+                    logger.debug("Adding routing table entries -> {}", entries);
+                    entries.forEach(routingTable::addEntry);
+                    stateManager.setState(CONNECTED);
+                    logger.info("Successfully connected to the network and created routing table");
+                }
+            }
         }
-
-        if (peers == null) {
-            logger.error("Peers are null");
-            throw new IllegalStateException("Unable to register successfully");
-        }
-
-        stateManager.setState(REGISTERED);
-        logger.info("Node registered successfully", ipAddress, port);
-
-        // 2. Connect to the peers send by BS and fetch their routing tables
-        logger.info("Collecting routing table from peers: {}", peers);
-        peers.forEach(peer -> {
-            Set<RoutingTableEntry> entries = communicationProvider.connect(peer);
-            logger.debug("Received routing table: {} from {}", entries, peer);
-            entries.forEach(routingTable::addEntry);
-        });
-        stateManager.setState(CONNECTED);
-
-        logger.info("Successfully connected to the network and created routing table");
 
         // 3. Select a Node Name
         this.nodeId = selectNodeName();
@@ -124,10 +123,8 @@ public class Node {
                 Integer.parseInt(routingTableEntry.getNodeName())).orElse(this.nodeId));
         characters.forEach(entryTable::addCharacter);
 
-
         // 5. Broadcast that I have joined the network to all entries in the routing table
         this.routingTable.getEntries().forEach(entry -> {
-            //TODO check the Notify other nodes broadcast
             Map<Character, Map<String, List<EntryTableEntry>>> toBeUndertaken = communicationProvider.notifyNewNode(
                     entry.getAddress(), new InetSocketAddress(ipAddress, port), this.nodeId);
 
@@ -177,6 +174,62 @@ public class Node {
     }
 
     /**
+     * Register and fetch 2 random peers from Bootstrap Server. Also retries until registration becomes successful.
+     *
+     * @return peers sent from Bootstrap server
+     */
+    private List<InetSocketAddress> register() {
+        logger.debug("Registering node");
+        List<InetSocketAddress> peers = null;
+        try {
+            peers = bootstrapProvider.register(ipAddress, port, username);
+        } catch (IOException e) {
+            logger.error("Error occurred when registering node", e);
+        }
+
+        if (peers == null) {
+            logger.warn("Peers are null");
+        } else {
+            stateManager.setState(REGISTERED);
+            logger.info("Node ({}:{}) registered successfully. Peers -> {}", ipAddress, port, peers);
+        }
+
+        return peers;
+    }
+
+    /**
+     * Connect to the peers send by BS and fetch their routing tables. This method will later be reused for
+     * synchronization purposes.
+     *
+     * @param peers peers to be connected
+     * @return true if connecting successful and got at least one entry
+     */
+    private Set<RoutingTableEntry> connect(List<InetSocketAddress> peers) {
+        logger.debug("Collecting routing table from peers: {}", peers);
+        Set<RoutingTableEntry> entries = new HashSet<>();
+        peers.forEach(peer -> {
+            Set<RoutingTableEntry> received = communicationProvider.connect(peer);
+            logger.debug("Received routing table: {} from {}", received, peer);
+            entries.addAll(received);
+        });
+
+        return entries;
+    }
+
+    /**
+     * Unregister
+     */
+    private void unregister() {
+        try {
+            bootstrapProvider.unregister(ipAddress, port, username);
+            stateManager.setState(IDLE);
+            logger.debug("Unregistered from Bootstrap Server");
+        } catch (IOException e) {
+            logger.error("Error occurred when unregistering", e);
+        }
+    }
+
+    /**
      * Selects a Node Name for the newly connected node (this one). When selecting, we chose a random node name within
      * <strong>1 - 180</strong> which maps from <strong>[A-Z0-9] -> [1-180]</strong>.
      *
@@ -223,6 +276,13 @@ public class Node {
     }
 
 
+    /**
+     * Returns the entries to be handed over to the newNode when a new node comes. This is based on the predecessor
+     * relationship
+     *
+     * @param nodeId new node's ID
+     * @return entries to be handed over
+     */
     public Map<Character, Map<String, List<EntryTableEntry>>> getEntriesToHandoverTo(int nodeId) {
         // 1. Find the predecessor of the node given
         Optional<RoutingTableEntry> entryOptional = routingTable.findPredecessorOf(nodeId);
@@ -278,15 +338,15 @@ public class Node {
                 stateManager.setState(REGISTERED);
             }
 
-            try {
-                bootstrapProvider.unregister(ipAddress, port, username);
-            } catch (IOException e) {
-                logger.error("Error occurred when unregistering", e);
-            }
+            unregister();
         }
 
         communicationProvider.stop();
         server.stop();
+        executorService.shutdownNow();
+        try {
+            executorService.awaitTermination(GRACE_PERIOD_MS, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException ignored) { }
         stateManager.setState(IDLE);
         logger.info("Distributed node stopped");
     }
