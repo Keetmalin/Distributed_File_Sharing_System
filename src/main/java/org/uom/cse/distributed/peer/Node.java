@@ -51,6 +51,7 @@ public class Node {
     private final List<String> myFiles = new ArrayList<>();
 
     private final CommunicationProvider communicationProvider;
+    private final UDPQuery udpQuery = new UDPQuery();
     private final Server server;
     private final String username;
     private final String ipAddress;
@@ -84,6 +85,7 @@ public class Node {
 
         server.start(this);
         communicationProvider.start();
+        udpQuery.initialize(this);
 
         // 1. Register and fetch 2 random peers from Bootstrap Server
         logger.debug("Registering node");
@@ -207,6 +209,7 @@ public class Node {
 
 
     public void stop() {
+        //graceful departure TODO
         logger.debug("Stopping node");
         if (stateManager.getState().compareTo(REGISTERED) >= 0) {
 
