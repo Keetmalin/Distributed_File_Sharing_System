@@ -91,6 +91,11 @@ public class UDPCommunicationProvider extends CommunicationProvider {
         logger.debug("Received response: {}", response);
     }
 
+    @Override
+    public InetSocketAddress[] searchFullFile(String fileName) {
+        return new InetSocketAddress[0];
+    }
+
     /**
      * This method retries a given requests or times out of that request fails. Tries for maximum of {@link
      * UDPCommunicationProvider#numOfRetries}

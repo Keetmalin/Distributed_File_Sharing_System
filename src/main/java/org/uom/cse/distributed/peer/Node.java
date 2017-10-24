@@ -145,7 +145,7 @@ public class Node {
         routingTable.addEntry(new RoutingTableEntry(new InetSocketAddress(ipAddress, port), String.valueOf(nodeId)));
 
         // 6. Send my files to corresponding nodes.
-        myFiles.addAll(getMyFiles());
+        myFiles.addAll(generateMyFiles());
         myFiles.forEach(file -> {
             String keywords[] = file.split(" ");
             Stream.of(keywords).forEach(keyword -> {
@@ -192,7 +192,7 @@ public class Node {
      *
      * @return List of files available in my node.
      */
-    private List<String> getMyFiles() {
+    private List<String> generateMyFiles() {
         if (myFiles.size() == 0) {
             //randomly decide the file count to be 3 to 5 files
             Random random = new Random();
@@ -248,6 +248,10 @@ public class Node {
         return username;
     }
 
+    public List<String> getMyFiles() {
+        return myFiles;
+    }
+
     public String getIpAddress() {
         return ipAddress;
     }
@@ -262,6 +266,10 @@ public class Node {
 
     public State getState() {
         return stateManager.getState();
+    }
+
+    public CommunicationProvider getCommunicationProvider() {
+        return communicationProvider;
     }
 
     @Override

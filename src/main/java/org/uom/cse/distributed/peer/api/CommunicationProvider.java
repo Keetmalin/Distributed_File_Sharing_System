@@ -59,4 +59,12 @@ public abstract class CommunicationProvider {
      * @param file    file name to be sent
      */
     public abstract void offerFile(InetSocketAddress peer, String keyword, int node, String file);
+
+    /**
+     * This will search for a file name in the entire system and return the list of nodes {@link InetSocketAddress}
+     *
+     * @param fileName the name of the file that needs to be searched
+     * @return returns a list of {@link InetSocketAddress} that contains the file name in full
+     */
+    public abstract InetSocketAddress[] searchFullFile(String fileName);
 }
