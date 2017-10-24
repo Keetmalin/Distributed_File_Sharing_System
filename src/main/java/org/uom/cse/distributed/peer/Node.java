@@ -104,10 +104,11 @@ public class Node {
         logger.info("Node registered successfully", ipAddress, port);
 
         // 2. Connect to the peers send by BS and fetch their routing tables
-        logger.debug("Collecting routing table from peers: {}", peers);
+        logger.info("Collecting routing table from peers: {}", peers);
         peers.forEach(peer -> {
             //TODO check routing table update - this doesn't retrieve the tables
             Set<RoutingTableEntry> entries = communicationProvider.connect(peer);
+            logger.debug("Received routing table: {} from {}", entries, peer);
             entries.forEach(routingTable::addEntry);
         });
         stateManager.setState(CONNECTED);

@@ -12,7 +12,7 @@ public class EntryTableEntry implements Serializable {
     private String file;
     private String nodeName;
 
-    public EntryTableEntry(String keyword, String nodeName, String file) {
+    public EntryTableEntry(String nodeName, String file) {
         if (nodeName == null || file == null) {
             throw new IllegalArgumentException("Node name and File should not be null");
         }

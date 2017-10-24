@@ -2,6 +2,7 @@ package org.uom.cse.distributed.peer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.uom.cse.distributed.peer.api.EntryTableEntry;
 import org.uom.cse.distributed.peer.api.Server;
 import org.uom.cse.distributed.peer.utils.RequestUtils;
 
@@ -49,7 +50,7 @@ public class UDPServer implements Server {
 
         this.node = node;
 
-        executorService = Executors.newSingleThreadExecutor();
+        executorService = Executors.newCachedThreadPool();
         executorService.submit(() -> {
             try {
                 listen();
@@ -74,31 +75,39 @@ public class UDPServer implements Server {
 
                 byte[] data = incoming.getData();
                 String incomingMsg = new String(data, 0, incoming.getLength());
-
-                //log the details of the incoming message
                 logger.debug("Received from {}:{} - {}", incoming.getAddress(), incoming.getPort(), incomingMsg);
 
-                String[] incomingResult = incomingMsg.split(" ", 2);
-
-                logger.debug("Request length: {}", incomingResult.length);
-                String command = incomingResult[0];
-                logger.debug("Command: {}", command);
-
-                if (GET_ROUTING_TABLE.equals(command)) {
-                    provideRoutingTable(incoming);
-                } else if (NEW_ENTRY.equals(command)) {
-                    String[] tempList = incomingResult[1].split(" ", 3);
-                    //                    this.node.getEntryTable().addEntry(new EntryTableEntry(tempList[0], tempList[1], tempList[2]));
-                } else if (JOIN.equals(command)) {
-                    //String ipAddress = st.nextToken();
-                    //int port = Integer.parseInt(st.nextToken());
-                    //                    handleBroadcastRequest(nodeName, incoming, ipAddress, port);
+                try {
+                    handleRequest(incomingMsg, incoming);
+                } catch (Exception e) {
+                    logger.error("Error occurred when handling request", e);
                 }
             }
         } catch (IOException e) {
-            logger.error("Error occurred when listening on Port", e);
-            throw new IllegalStateException("Unable to start server", e);
+            logger.error("Error occurred when listening on port {}", port, e);
+            throw new IllegalStateException("Error occurred when listening", e);
         }
+    }
+
+    private void handleRequest(String request, DatagramPacket incoming) {
+        String[] incomingResult = request.split(" ", 3);
+
+        logger.debug("Request length: {}", incomingResult[0]);
+        String command = incomingResult[1];
+        logger.debug("Command: {}", command);
+
+        if (GET_ROUTING_TABLE.equals(command)) {
+            provideRoutingTable(incoming);
+        } else if (NEW_ENTRY.equals(command)) {
+            String[] tempList = incomingResult[2].split(" ", 3);
+            logger.debug("Adding entry to entry table: {}", tempList);
+            this.node.getEntryTable().addEntry(tempList[0], new EntryTableEntry(tempList[1], tempList[2]));
+        } else if (JOIN.equals(command)) {
+            //String ipAddress = st.nextToken();
+            //int port = Integer.parseInt(st.nextToken());
+            //                    handleBroadcastRequest(nodeName, incoming, ipAddress, port);
+        }
+
     }
 
     @Override

@@ -30,6 +30,7 @@ import static org.uom.cse.distributed.Constants.RETRY_TIMEOUT_MS;
 /**
  * Provides UDP Socket Based communication with Peers
  *
+ * @author Imesha Sudasingha
  * @author Keet Sugathadasa
  */
 public class UDPCommunicationProvider extends CommunicationProvider {
@@ -46,7 +47,6 @@ public class UDPCommunicationProvider extends CommunicationProvider {
     @SuppressWarnings("unchecked")
     @Override
     public Set<RoutingTableEntry> connect(InetSocketAddress peer) {
-        //TODO check build request method
         String request = RequestUtils.buildRequest(GET_ROUTING_TABLE);
         logger.debug("Sending request ({}) to get routing table from {}", request, peer);
         String response = retryOrTimeout(request, peer);
@@ -109,15 +109,15 @@ public class UDPCommunicationProvider extends CommunicationProvider {
             });
 
             try {
-                //TODO fix this - it retries for 3 times always
                 return task.get(RETRY_TIMEOUT_MS, TimeUnit.MILLISECONDS);
             } catch (Exception e) {
-                logger.error("Error occurred when completing request({}) to peer- {}. Error: {}", request, peer, e.getMessage());
+                logger.error("Error occurred when completing request({}) to peer- {}. Error: {}", request, peer, e);
                 task.cancel(true);
                 retriesLeft--;
             }
         }
 
+        logger.error("REQUEST FAILED !!! ({} -> {})", request, peer);
         return null;
     }
 

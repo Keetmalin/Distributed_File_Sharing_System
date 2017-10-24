@@ -20,8 +20,8 @@ import java.util.concurrent.ConcurrentHashMap;
  *     }
  * </pre>
  *
- * @author Keet Sugathadasa
  * @author Imesha Sudasingha
+ * @author Keet Sugathadasa
  */
 public class EntryTable {
 
