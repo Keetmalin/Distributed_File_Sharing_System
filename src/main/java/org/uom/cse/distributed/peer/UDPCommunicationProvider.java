@@ -3,6 +3,7 @@ package org.uom.cse.distributed.peer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.uom.cse.distributed.peer.api.CommunicationProvider;
+import org.uom.cse.distributed.peer.api.EntryTableEntry;
 import org.uom.cse.distributed.peer.utils.RequestUtils;
 
 import java.io.ByteArrayInputStream;
@@ -20,7 +21,11 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import static org.uom.cse.distributed.Constants.*;
+import static org.uom.cse.distributed.Constants.GET_ROUTING_TABLE;
+import static org.uom.cse.distributed.Constants.NEWENTRY_MSG_FORMAT;
+import static org.uom.cse.distributed.Constants.NEWNODE_MSG_FORMAT;
+import static org.uom.cse.distributed.Constants.RETRIES_COUNT;
+import static org.uom.cse.distributed.Constants.RETRY_TIMEOUT_MS;
 
 /**
  * Provides UDP Socket Based communication with Peers
@@ -67,7 +72,7 @@ public class UDPCommunicationProvider extends CommunicationProvider {
     }
 
     @Override
-    public Map<String, Map<String, List<Integer>>> notifyNewNode(InetSocketAddress peer, InetSocketAddress me, int nodeId) {
+    public Map<Character, Map<String, List<EntryTableEntry>>> notifyNewNode(InetSocketAddress peer, InetSocketAddress me, int nodeId) {
         String msg = String.format(NEWNODE_MSG_FORMAT, me.getHostName(), me.getPort(), nodeId);
         String request = RequestUtils.buildRequest(msg);
         logger.debug("Notifying new node to {} as message: {}", peer, request);
@@ -77,10 +82,12 @@ public class UDPCommunicationProvider extends CommunicationProvider {
     }
 
     @Override
-    public void offerFile(InetSocketAddress peer, String keyword, String node , String file ){
-
-        String request = NEW_ENTRY + " " + keyword + " " + node + " " + file;
-        retryOrTimeout( request , peer);
+    public void offerFile(InetSocketAddress peer, String keyword, int nodeId, String file) {
+        String msg = String.format(NEWENTRY_MSG_FORMAT, keyword, nodeId, file);
+        String request = RequestUtils.buildRequest(msg);
+        logger.debug("Offering file with request: {}", request);
+        String response = retryOrTimeout(request, peer);
+        logger.debug("Received response: {}", response);
     }
 
     /**

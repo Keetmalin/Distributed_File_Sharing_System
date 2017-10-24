@@ -1,4 +1,4 @@
-package org.uom.cse.distributed.peer;
+package org.uom.cse.distributed.peer.api;
 
 import java.io.Serializable;
 
@@ -7,24 +7,18 @@ import java.io.Serializable;
  *
  * @author Keet Sugathadasa
  */
-public class EntryTableEntry implements Serializable{
+public class EntryTableEntry implements Serializable {
 
-    private String word;
     private String file;
     private String nodeName;
 
-    public EntryTableEntry(String word, String nodeName, String file) {
-        if (word == null || nodeName == null || file == null) {
-            throw new IllegalArgumentException("Word, Node name and File should not be null");
+    public EntryTableEntry(String keyword, String nodeName, String file) {
+        if (nodeName == null || file == null) {
+            throw new IllegalArgumentException("Node name and File should not be null");
         }
 
-        this.word = word;
         this.nodeName = nodeName;
         this.file = file;
-    }
-
-    public String getWord() {
-        return word;
     }
 
     public String getNodeName() {
@@ -44,11 +38,11 @@ public class EntryTableEntry implements Serializable{
         return o != null &&
                 o instanceof EntryTableEntry &&
                 this.getNodeName().equals(((EntryTableEntry) o).getNodeName()) &&
-                this.getWord().equals(((EntryTableEntry) o).getWord());
+                this.getFileName().equals(((EntryTableEntry) o).getFileName());
     }
 
     @Override
     public String toString() {
-        return String.format("%s-%s", nodeName, word);
+        return String.format("%s-%s", nodeName, file);
     }
 }
