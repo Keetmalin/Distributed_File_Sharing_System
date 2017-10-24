@@ -30,8 +30,8 @@ import static org.uom.cse.distributed.peer.api.State.REGISTERED;
 /**
  * The class to represent a Node in the distributed network.
  *
- * @author Keet Sugathadasa
  * @author Imesha Sudasingha
+ * @author Keet Sugathadasa
  */
 public class Node {
 
@@ -101,7 +101,6 @@ public class Node {
         // 2. Connect to the peers send by BS and fetch their routing tables
         logger.info("Collecting routing table from peers: {}", peers);
         peers.forEach(peer -> {
-            //TODO check routing table update - this doesn't retrieve the tables
             Set<RoutingTableEntry> entries = communicationProvider.connect(peer);
             logger.debug("Received routing table: {} from {}", entries, peer);
             entries.forEach(routingTable::addEntry);
@@ -236,6 +235,8 @@ public class Node {
         RoutingTableEntry predecessor = entryOptional.get();
         logger.debug("Found predecessor {} for node -> {}", predecessor, nodeId);
         Set<Character> characters = HashUtils.findCharactersOf(nodeId, Integer.parseInt(predecessor.getNodeName()));
+        // Adding the new node as well.
+        characters.add(HashUtils.nodeIdToChar(nodeId));
 
         // 3. Collect the entries for those characters
         Map<Character, Map<String, List<EntryTableEntry>>> toBeHandedOver = new HashMap<>();
@@ -320,6 +321,14 @@ public class Node {
 
     public CommunicationProvider getCommunicationProvider() {
         return communicationProvider;
+    }
+
+    public int getNodeId() {
+        return nodeId;
+    }
+
+    public char getMyChar() {
+        return myChar;
     }
 
     @Override

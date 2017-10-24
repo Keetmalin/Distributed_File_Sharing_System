@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Represents the entry table of a given node. Entries are kept as
@@ -27,14 +26,14 @@ public class EntryTable {
 
     private static final Logger logger = LoggerFactory.getLogger(RoutingTable.class);
 
-    private final Map<Character, Map<String, List<EntryTableEntry>>> entries = new ConcurrentHashMap<>();
+    private final Map<Character, Map<String, List<EntryTableEntry>>> entries = new HashMap<>();
 
-    public void addCharacter(Character c) {
+    public synchronized void addCharacter(Character c) {
         logger.info("Adding character [{}] to my entry table", c);
         entries.putIfAbsent(c, new HashMap<>());
     }
 
-    public void addEntry(String keyword, EntryTableEntry entry) {
+    public synchronized void addEntry(String keyword, EntryTableEntry entry) {
         if (keyword == null || entry == null) {
             throw new IllegalArgumentException("Keyword and entry cannot be null");
         }
@@ -61,7 +60,7 @@ public class EntryTable {
         }
     }
 
-    public boolean removeEntry(String keyword, EntryTableEntry entry) {
+    public synchronized boolean removeEntry(String keyword, EntryTableEntry entry) {
         logger.debug("Removing entry {}->{}", keyword, entry);
         if (keyword != null) {
             char c = keyword.toUpperCase().charAt(0);
@@ -78,7 +77,7 @@ public class EntryTable {
      * @param c character to be removed
      * @return true if the character was in our entries
      */
-    public boolean removeCharacter(char c) {
+    public synchronized boolean removeCharacter(char c) {
         c = Character.toUpperCase(c);
         if (entries.containsKey(c)) {
             logger.info("Removing character [{}] from entries", c);
@@ -94,16 +93,16 @@ public class EntryTable {
      * @param c character
      * @return keywords under that character
      */
-    public Map<String, List<EntryTableEntry>> getKeywordsFor(char c) {
+    public synchronized Map<String, List<EntryTableEntry>> getKeywordsFor(char c) {
         return entries.get(c);
     }
 
-    public void clear() {
+    public synchronized void clear() {
         entries.clear();
         logger.info("Cleared entry table");
     }
 
-    public Map<Character, Map<String, List<EntryTableEntry>>> getEntries() {
+    public synchronized Map<Character, Map<String, List<EntryTableEntry>>> getEntries() {
         return entries;
     }
 }
