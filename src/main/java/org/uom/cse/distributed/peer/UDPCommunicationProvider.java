@@ -46,6 +46,7 @@ public class UDPCommunicationProvider extends CommunicationProvider {
     @SuppressWarnings("unchecked")
     @Override
     public Set<RoutingTableEntry> connect(InetSocketAddress peer) {
+        //TODO check build request method
         String request = RequestUtils.buildRequest(GET_ROUTING_TABLE);
         logger.debug("Sending request ({}) to get routing table from {}", request, peer);
         String response = retryOrTimeout(request, peer);

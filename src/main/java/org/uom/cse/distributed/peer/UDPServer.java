@@ -101,12 +101,6 @@ public class UDPServer implements Server {
         }
     }
 
-    //    private void sendResponse(String response , DatagramPacket incoming , DatagramSocket datagramSocket) throws IOException{
-    //        DatagramPacket dpReply = new DatagramPacket(response.getBytes(), response.getBytes().length,
-    //                incoming.getAddress(), incoming.getPort());
-    //        datagramSocket.send(dpReply);
-    //    }
-
     @Override
     public void provideRoutingTable(DatagramPacket incoming) {
         int retriesLeft = numOfRetries;
@@ -148,42 +142,6 @@ public class UDPServer implements Server {
 
 
     }
-
-    //    @Override
-    //    public void broadcast(String nodeName , DatagramPacket datagramPacket) {
-    //
-    //        String request = buildNewNodeEntry();
-    //
-    //        Set<RoutingTable.RoutingTableEntry> routingEntries = node.getRoutingTable().getEntries();
-    //        for (RoutingTable.RoutingTableEntry entry: routingEntries) {
-    //
-    //            int retriesLeft = numOfRetries;
-    //            while (retriesLeft > 0) {
-    //                try (DatagramSocket datagramSocket = createDatagramSocket()) {
-    //                    String response = RequestUtils.sendRequest(datagramSocket, request, entry.getAddress().getAddress(),
-    //                            entry.getPort());
-    //                    logger.debug("Response received : {}", response);
-    //                } catch (IOException e) {
-    //                    logger.error("Error occurred when sending the request", e);
-    //                    retriesLeft--;
-    //                }
-    //            }
-    //
-    //        }
-    //
-    //        logger.debug("broadcast to all entries in the routing table complete");
-    //
-    //
-    //
-    //    }
-    //
-    //    private String buildNewNodeEntry(){
-    //        return NEW_NODE_ENTRY + " " + node.getUsername() + " " + node.getIpAddress() + " " + String.valueOf(node.getPort());
-    //    }
-
-    //    private void addPeer(String ipAddress, int port) throws UnknownHostException {
-    //        this.node.addPeer(new InetSocketAddress(ipAddress , port));
-    //    }
 
     public void stop() {
         if (started) {
