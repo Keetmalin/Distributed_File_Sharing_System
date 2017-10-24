@@ -145,8 +145,7 @@ public class RoutingTable {
 
         if (predecessor.isPresent() && Integer.parseInt(predecessor.get().getNodeName()) != nodeId) {
             return predecessor;
-        } else if (sortedEntries.size() > 0 &&
-                Integer.parseInt(sortedEntries.get(sortedEntries.size() - 1).getNodeName()) != nodeId) {
+        } else if (sortedEntries.size() > 0 && Integer.parseInt(sortedEntries.get(0).getNodeName()) != nodeId) {
             return Optional.of(sortedEntries.get(0));
         }
 

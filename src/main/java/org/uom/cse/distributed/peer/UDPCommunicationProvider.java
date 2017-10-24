@@ -53,14 +53,10 @@ public class UDPCommunicationProvider extends CommunicationProvider {
         String response = retryOrTimeout(request, peer);
         logger.debug("Received response : {}", response);
         if (response != null) {
-            byte[] received = Base64.getDecoder().decode(response);
-            ByteArrayInputStream bais = new ByteArrayInputStream(received);
-            try (ObjectInputStream in = new ObjectInputStream(bais)) {
-                Object obj = in.readObject();
-                logger.debug("Received routing table entries. {} - {}", obj.getClass(), obj);
+            Object obj = RequestUtils.base64StringToObject(response);
+            logger.debug("Received routing table entries -> {}", obj);
+            if (obj != null) {
                 return (HashSet<RoutingTableEntry>) obj;
-            } catch (Exception e) {
-                logger.error("Error occurred when obtaining routing table", e);
             }
         }
 
@@ -73,6 +69,7 @@ public class UDPCommunicationProvider extends CommunicationProvider {
         return false;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public Map<Character, Map<String, List<EntryTableEntry>>> notifyNewNode(InetSocketAddress peer, InetSocketAddress me, int nodeId) {
         String msg = String.format(NEWNODE_MSG_FORMAT, me.getHostName(), me.getPort(), nodeId);
@@ -80,6 +77,13 @@ public class UDPCommunicationProvider extends CommunicationProvider {
         logger.debug("Notifying new node to {} as message: {}", peer, request);
         String response = retryOrTimeout(request, peer);
         logger.debug("Received response : {}", response);
+        if (response != null) {
+            Object obj = RequestUtils.base64StringToObject(response);
+            logger.debug("Received characters to be taken over -> {}", obj);
+            if (obj != null) {
+                return (Map<Character, Map<String, List<EntryTableEntry>>>) obj;
+            }
+        }
         return new HashMap<>();
     }
 

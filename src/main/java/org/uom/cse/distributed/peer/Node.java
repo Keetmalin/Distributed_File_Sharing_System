@@ -13,15 +13,7 @@ import org.uom.cse.distributed.peer.utils.HashUtils;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Random;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -141,7 +133,7 @@ public class Node {
                     entry.getAddress(), new InetSocketAddress(ipAddress, port), this.nodeId);
 
             toBeUndertaken.forEach((letter, keywordMap) -> {
-                logger.info("Undertaking letter '{}' and keywords : {}", letter, keywordMap);
+                logger.info("Undertaking letter [{}] and keywords -> {}", letter, keywordMap);
 
                 // First put the letter [A-Z0-9]
                 entryTable.addCharacter(letter);
@@ -222,6 +214,44 @@ public class Node {
             return tempList.subList(0, 1);
         }
         return myFiles;
+    }
+
+
+    public void addNewNode(String ipAddress, int newNodePort, int newNodeId) {
+        InetSocketAddress inetSocketAddress = new InetSocketAddress(ipAddress, newNodePort);
+        RoutingTableEntry routingTableEntry = new RoutingTableEntry(inetSocketAddress, String.valueOf(newNodeId));
+        routingTable.addEntry(routingTableEntry);
+    }
+
+
+    public Map<Character, Map<String, List<EntryTableEntry>>> getEntriesToHandoverTo(int nodeId) {
+        // 1. Find the predecessor of the node given
+        Optional<RoutingTableEntry> entryOptional = routingTable.findPredecessorOf(nodeId);
+        if (!entryOptional.isPresent()) {
+            logger.warn("No predecessor found for node -> {}", nodeId);
+            return null;
+        }
+
+        // 2. Now find the characters which should be handled by the new node. i.e: From its predecessor to new node
+        RoutingTableEntry predecessor = entryOptional.get();
+        logger.debug("Found predecessor {} for node -> {}", predecessor, nodeId);
+        Set<Character> characters = HashUtils.findCharactersOf(nodeId, Integer.parseInt(predecessor.getNodeName()));
+
+        // 3. Collect the entries for those characters
+        Map<Character, Map<String, List<EntryTableEntry>>> toBeHandedOver = new HashMap<>();
+        characters.forEach(character -> {
+            Map<String, List<EntryTableEntry>> keywords = entryTable.getKeywordsFor(character);
+            if (keywords != null) {
+                toBeHandedOver.put(character, keywords);
+            }
+        });
+
+        return toBeHandedOver;
+    }
+
+
+    public void removeEntries(Set<Character> characters) {
+        characters.forEach(entryTable::removeCharacter);
     }
 
 

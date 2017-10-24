@@ -45,18 +45,18 @@ public class EntryTable {
             throw new IllegalArgumentException("Character " + c + " is not in my entries");
         }
 
-        logger.debug("Adding entry {} to entry table", entry);
+        logger.debug("Adding entry -> {}", entry);
         if (entries.get(c).containsKey(keyword)) {
             if (entries.get(c).get(keyword).contains(entry)) {
                 logger.warn("{} already exists", entry);
             } else {
-                logger.info("Adding entry {} to entry table", entry);
                 entries.get(c).get(keyword).add(entry);
+                logger.info("Added entry -> {}", entry);
             }
         } else {
             List<EntryTableEntry> list = new ArrayList<>();
             list.add(entry);
-            logger.info("Adding keyword: {} and entry: {} to entry table", keyword, entry);
+            logger.info("Adding keyword [{}] and entry -> {}", keyword, entry);
             entries.get(c).put(keyword, list);
         }
     }

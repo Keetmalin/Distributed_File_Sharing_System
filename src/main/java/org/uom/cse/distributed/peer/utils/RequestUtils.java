@@ -7,8 +7,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.uom.cse.distributed.Constants;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -177,4 +179,20 @@ public class RequestUtils {
         return String.format(Constants.MSG_FORMAT, request.length() + 5, request);
     }
 
+    /**
+     * Converts a Base64 string to a java object. This is the deserialization process.
+     *
+     * @param base64 Base64 string
+     * @return Deserialized object
+     */
+    public static Object base64StringToObject(String base64) {
+        byte[] received = Base64.getDecoder().decode(base64);
+        ByteArrayInputStream bais = new ByteArrayInputStream(received);
+        try (ObjectInputStream in = new ObjectInputStream(bais)) {
+            return in.readObject();
+        } catch (Exception e) {
+            logger.error("Error occurred when obtaining routing table", e);
+            return null;
+        }
+    }
 }
