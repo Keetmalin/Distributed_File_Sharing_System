@@ -93,6 +93,7 @@ public class Node {
         // 2. Connect to the peers send by BS and fetch their routing tables
         logger.debug("Collecting routing table from peers: {}", peers);
         peers.forEach(peer -> {
+            //TODO check routing table update - this doesn't retrieve the tables
             Set<RoutingTableEntry> entries = communicationProvider.connect(peer);
             entries.forEach(routingTable::addEntry);
         });
@@ -106,6 +107,7 @@ public class Node {
 
         // 4. Broadcast that I have joined the network to all entries in the routing table
         this.routingTable.getEntries().forEach(entry -> {
+            //TODO check the Notify other nodes broadcast
             Map<String, Map<String, List<Integer>>> toBeUndertaken = communicationProvider.notifyNewNode(
                     entry.getAddress(), new InetSocketAddress(ipAddress, port), this.nodeId);
 
@@ -188,7 +190,7 @@ public class Node {
 
             List<String> tempList = Arrays.asList(FILE_NAME_ARRAY);
             Collections.shuffle(tempList);
-            return tempList.subList(0, fileCount);
+            return tempList.subList(0, 1);
         }
         return myFiles;
     }

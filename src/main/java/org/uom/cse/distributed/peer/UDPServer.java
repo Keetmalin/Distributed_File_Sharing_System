@@ -75,7 +75,7 @@ public class UDPServer implements Server {
                 //log the details of the incoming message
                 logger.debug("Received from {}:{} - {}", incoming.getAddress(), incoming.getPort(), incomingMsg);
 
-                String[] incomingResult = incomingMsg.split(" " , 2);
+                String[] incomingResult = incomingMsg.split(" ", 2);
 
                 logger.debug("Request length: {}", incomingResult.length);
                 String command = incomingResult[0];
@@ -83,11 +83,10 @@ public class UDPServer implements Server {
 
                 if (GET_ROUTING_TABLE.equals(command)) {
                     provideRoutingTable(incoming);
-                } else if (NEW_ENTRY.equals(command)){
-                    String[] tempList = incomingResult[1].split(" " , 3);
-                    this.node.getEntryTable().addEntry(new EntryTableEntry(tempList[0] , tempList[1] , tempList[2]));
-                }
-                else if (JOIN.equals(command)) {
+                } else if (NEW_ENTRY.equals(command)) {
+                    String[] tempList = incomingResult[1].split(" ", 3);
+                    this.node.getEntryTable().addEntry(new EntryTableEntry(tempList[0], tempList[1], tempList[2]));
+                } else if (JOIN.equals(command)) {
                     //String ipAddress = st.nextToken();
                     //int port = Integer.parseInt(st.nextToken());
                     //                    handleBroadcastRequest(nodeName, incoming, ipAddress, port);
@@ -98,12 +97,6 @@ public class UDPServer implements Server {
             throw new IllegalStateException("Unable to start server", e);
         }
     }
-
-    //    private void sendResponse(String response , DatagramPacket incoming , DatagramSocket datagramSocket) throws IOException{
-    //        DatagramPacket dpReply = new DatagramPacket(response.getBytes(), response.getBytes().length,
-    //                incoming.getAddress(), incoming.getPort());
-    //        datagramSocket.send(dpReply);
-    //    }
 
     @Override
     public void provideRoutingTable(DatagramPacket incoming) {
@@ -146,42 +139,6 @@ public class UDPServer implements Server {
 
 
     }
-
-    //    @Override
-    //    public void broadcast(String nodeName , DatagramPacket datagramPacket) {
-    //
-    //        String request = buildNewNodeEntry();
-    //
-    //        Set<RoutingTable.RoutingTableEntry> routingEntries = node.getRoutingTable().getEntries();
-    //        for (RoutingTable.RoutingTableEntry entry: routingEntries) {
-    //
-    //            int retriesLeft = numOfRetries;
-    //            while (retriesLeft > 0) {
-    //                try (DatagramSocket datagramSocket = createDatagramSocket()) {
-    //                    String response = RequestUtils.sendRequest(datagramSocket, request, entry.getAddress().getAddress(),
-    //                            entry.getPort());
-    //                    logger.debug("Response received : {}", response);
-    //                } catch (IOException e) {
-    //                    logger.error("Error occurred when sending the request", e);
-    //                    retriesLeft--;
-    //                }
-    //            }
-    //
-    //        }
-    //
-    //        logger.debug("broadcast to all entries in the routing table complete");
-    //
-    //
-    //
-    //    }
-    //
-    //    private String buildNewNodeEntry(){
-    //        return NEW_NODE_ENTRY + " " + node.getUsername() + " " + node.getIpAddress() + " " + String.valueOf(node.getPort());
-    //    }
-
-    //    private void addPeer(String ipAddress, int port) throws UnknownHostException {
-    //        this.node.addPeer(new InetSocketAddress(ipAddress , port));
-    //    }
 
     public void stop() {
         if (started) {

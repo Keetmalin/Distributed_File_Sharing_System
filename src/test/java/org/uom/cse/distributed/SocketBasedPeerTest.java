@@ -33,7 +33,7 @@ public class SocketBasedPeerTest {
     public void testRegisterWithBootstrapServer() {
         List<Node> nodes = new ArrayList<>();
         int port = 35002;
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 2; i++) {
             logger.info("\n------------------- Creating Node at port {} --------------------", port);
             Node node = new Node(port);
             nodes.add(node);

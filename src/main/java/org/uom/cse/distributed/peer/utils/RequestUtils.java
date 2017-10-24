@@ -180,7 +180,7 @@ public class RequestUtils {
     }
 
     /**
-     * Builds the message to the format <pre>%4d %s</pre> which will be the actual request sent to the server
+     * Builds the message to the format <pre>%4d %s</pre> which will be the actual request sent to the Bootstrap server
      *
      * @param request Request to be included in the message
      * @return formatted message

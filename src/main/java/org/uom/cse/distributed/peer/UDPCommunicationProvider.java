@@ -41,6 +41,7 @@ public class UDPCommunicationProvider extends CommunicationProvider {
     @SuppressWarnings("unchecked")
     @Override
     public Set<RoutingTableEntry> connect(InetSocketAddress peer) {
+        //TODO check build request method
         String request = RequestUtils.buildRequest(GET_ROUTING_TABLE);
         logger.debug("Sending request ({}) to get routing table from {}", request, peer);
         String response = retryOrTimeout(request, peer);
@@ -68,8 +69,8 @@ public class UDPCommunicationProvider extends CommunicationProvider {
 
     @Override
     public Map<String, Map<String, List<Integer>>> notifyNewNode(InetSocketAddress peer, InetSocketAddress me, int nodeId) {
-        String msg = String.format(NEWNODE_MSG_FORMAT, me.getHostName(), me.getPort(), nodeId);
-        String request = RequestUtils.buildRequest(msg);
+        String request = String.format(NEWNODE_MSG_FORMAT, me.getHostName(), me.getPort(), nodeId);
+        //String request = RequestUtils.buildRequest(msg);
         logger.debug("Notifying new node to {} as message: {}", peer, request);
         String response = retryOrTimeout(request, peer);
         logger.debug("Received response : {}", response);
