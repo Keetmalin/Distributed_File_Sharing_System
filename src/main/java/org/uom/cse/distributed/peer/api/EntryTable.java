@@ -63,11 +63,39 @@ public class EntryTable {
 
     public boolean removeEntry(String keyword, EntryTableEntry entry) {
         logger.debug("Removing entry {}->{}", keyword, entry);
-        return keyword != null &&
-                entries.containsKey(keyword.charAt(0)) &&
-                this.entries.get(keyword.charAt(0)).containsKey(keyword) &&
-                this.entries.get(keyword.charAt(0)).get(keyword).remove(entry);
+        if (keyword != null) {
+            char c = keyword.toUpperCase().charAt(0);
+            return entries.containsKey(c) &&
+                    this.entries.get(c).containsKey(keyword) &&
+                    this.entries.get(c).get(keyword).remove(entry);
+        }
+        return false;
+    }
 
+    /**
+     * Removes all the mappings for the given character
+     *
+     * @param c character to be removed
+     * @return true if the character was in our entries
+     */
+    public boolean removeCharacter(char c) {
+        c = Character.toUpperCase(c);
+        if (entries.containsKey(c)) {
+            logger.info("Removing character [{}] from entries", c);
+            entries.remove(c);
+        }
+
+        return false;
+    }
+
+    /**
+     * Gets all the keywords for a given character
+     *
+     * @param c character
+     * @return keywords under that character
+     */
+    public Map<String, List<EntryTableEntry>> getKeywordsFor(char c) {
+        return entries.get(c);
     }
 
     public void clear() {

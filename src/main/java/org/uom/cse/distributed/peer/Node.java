@@ -128,6 +128,7 @@ public class Node {
         entryTable.addCharacter(myChar);
 
         Optional<RoutingTableEntry> myPredecessor = routingTable.findPredecessorOf(this.nodeId);
+        logger.debug("My predecessor is -> {}", myPredecessor);
         Set<Character> characters = HashUtils.findCharactersOf(this.nodeId, myPredecessor.map(routingTableEntry ->
                 Integer.parseInt(routingTableEntry.getNodeName())).orElse(this.nodeId));
         characters.forEach(entryTable::addCharacter);

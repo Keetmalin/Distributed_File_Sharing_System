@@ -44,5 +44,5 @@ public interface Server {
      * @param request   Request received
      * @param recipient The client who is sending the request
      */
-    void handleNewNodeRequest(String request, InetSocketAddress recipient);
+    void handleNewNodeRequest(String request, InetSocketAddress recipient) throws IOException;
 }

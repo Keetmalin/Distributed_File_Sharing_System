@@ -2,8 +2,10 @@ package org.uom.cse.distributed.peer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.uom.cse.distributed.peer.api.EntryTable;
 import org.uom.cse.distributed.peer.api.EntryTableEntry;
 import org.uom.cse.distributed.peer.api.Server;
+import org.uom.cse.distributed.peer.utils.HashUtils;
 import org.uom.cse.distributed.peer.utils.RequestUtils;
 
 import java.io.IOException;
@@ -11,7 +13,10 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -144,12 +149,56 @@ public class UDPServer implements Server {
     }
 
     @Override
-    public void handleNewNodeRequest(String request, InetSocketAddress recipient) {
+    public void handleNewNodeRequest(String request, InetSocketAddress recipient) throws IOException {
         String[] parts = request.split(" ");
+
+        RoutingTable routingTable = this.node.getRoutingTable();
+        EntryTable entryTable = this.node.getEntryTable();
+
+        // 1. Adding to the routing table
         InetSocketAddress inetSocketAddress = new InetSocketAddress(parts[0], Integer.parseInt(parts[1]));
         RoutingTableEntry routingTableEntry = new RoutingTableEntry(inetSocketAddress, parts[2]);
-        this.node.getRoutingTable().addEntry(routingTableEntry);
-        retryOrTimeout(RESPONSE_OK, recipient);
+        routingTable.addEntry(routingTableEntry);
+
+        // 2. Now find any character that should belong to this new node but are currently with me and send them
+        int newNodeId = Integer.parseInt(parts[2]);
+        Optional<RoutingTableEntry> entryOptional = routingTable.findPredecessorOf(newNodeId);
+        if (!entryOptional.isPresent()) {
+            logger.warn("No predecessor found for node -> {}", newNodeId);
+            retryOrTimeout(RESPONSE_FAILURE, recipient);
+            return;
+        }
+
+        // 3. Now find the characters which should be handled by the new node. i.e: From its predecessor to new node
+        RoutingTableEntry predecessor = entryOptional.get();
+        logger.debug("Found predecessor {} for node -> {}", predecessor, newNodeId);
+        Set<Character> characters = HashUtils.findCharactersOf(newNodeId, Integer.parseInt(predecessor.getNodeName()));
+
+        // 4. Collect the entries for those characters
+        Map<Character, Map<String, List<EntryTableEntry>>> removedEntries = new HashMap<>();
+        characters.forEach(character -> {
+            Map<String, List<EntryTableEntry>> keywords = entryTable.getKeywordsFor(character);
+            if (keywords != null) {
+                removedEntries.put(character, keywords);
+            }
+        });
+
+        // 5.  Send the entries to new node. Only if that's successful, we remove them from myself
+        logger.debug("Notifying characters belonging to node -> {} : {}", newNodeId, removedEntries.keySet());
+        String response;
+        try {
+            response = RequestUtils.buildObjectRequest(this.node.getRoutingTable().getEntries());
+        } catch (IOException e) {
+            logger.error("Error occurred when building object request: {}", e);
+            throw e;
+        }
+
+        if (retryOrTimeout(response, recipient)) {
+            logger.debug("Successfully notified characters ({}) to node -> {}", removedEntries.keySet(), newNodeId);
+            removedEntries.forEach((c, keywords) -> entryTable.removeCharacter(c));
+        } else {
+            logger.error("Unable to notify entries to node -> {}. Retaining chars for now", newNodeId);
+        }
     }
 
     /**
