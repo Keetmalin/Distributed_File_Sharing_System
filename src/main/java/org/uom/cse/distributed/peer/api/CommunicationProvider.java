@@ -3,9 +3,6 @@
  */
 package org.uom.cse.distributed.peer.api;
 
-import org.uom.cse.distributed.peer.RoutingTable;
-import org.uom.cse.distributed.peer.RoutingTableEntry;
-
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;

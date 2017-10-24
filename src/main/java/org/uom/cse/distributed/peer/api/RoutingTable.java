@@ -1,7 +1,7 @@
 /* 
  * <Paste your header here>
  */
-package org.uom.cse.distributed.peer;
+package org.uom.cse.distributed.peer.api;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

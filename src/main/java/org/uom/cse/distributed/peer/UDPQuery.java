@@ -3,6 +3,7 @@ package org.uom.cse.distributed.peer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.uom.cse.distributed.peer.api.QueryInterface;
+import org.uom.cse.distributed.peer.api.RoutingTableEntry;
 import org.uom.cse.distributed.peer.utils.HashUtils;
 
 import java.net.InetSocketAddress;

@@ -2,7 +2,6 @@ package org.uom.cse.distributed.peer.api;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.uom.cse.distributed.peer.RoutingTable;
 
 import java.util.ArrayList;
 import java.util.HashMap;

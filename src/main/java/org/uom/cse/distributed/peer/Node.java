@@ -6,6 +6,8 @@ import org.uom.cse.distributed.peer.api.BootstrapProvider;
 import org.uom.cse.distributed.peer.api.CommunicationProvider;
 import org.uom.cse.distributed.peer.api.EntryTable;
 import org.uom.cse.distributed.peer.api.EntryTableEntry;
+import org.uom.cse.distributed.peer.api.RoutingTable;
+import org.uom.cse.distributed.peer.api.RoutingTableEntry;
 import org.uom.cse.distributed.peer.api.Server;
 import org.uom.cse.distributed.peer.api.State;
 import org.uom.cse.distributed.peer.api.StateManager;
@@ -170,6 +172,12 @@ public class Node {
             });
         });
 
+        // TODO: 10/24/17 Periodic synchronization
+        /*
+         * 1. First, get 2 random entries from the routing table.
+         * 2. Then ask them for routing tables. -> Update mine with that.
+         * 3. Then, send SYNC request to all nodes ... ????
+         */
         stateManager.setState(CONFIGURED);
     }
 

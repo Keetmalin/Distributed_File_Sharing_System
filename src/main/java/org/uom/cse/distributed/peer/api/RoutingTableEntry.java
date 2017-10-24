@@ -1,7 +1,7 @@
 /* 
  * <Paste your header here>
  */
-package org.uom.cse.distributed.peer;
+package org.uom.cse.distributed.peer.api;
 
 import java.io.Serializable;
 import java.net.InetSocketAddress;
