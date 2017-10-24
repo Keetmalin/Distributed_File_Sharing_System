@@ -43,6 +43,6 @@ public class EntryTableEntry implements Serializable {
 
     @Override
     public String toString() {
-        return String.format("%s-%s", nodeName, file);
+        return String.format("[%s -> %s]", nodeName, file);
     }
 }

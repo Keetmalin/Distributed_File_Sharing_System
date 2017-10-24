@@ -3,6 +3,7 @@ package org.uom.cse.distributed.peer;
 import org.uom.cse.distributed.peer.api.Server;
 
 import java.net.DatagramPacket;
+import java.net.InetSocketAddress;
 
 /**
  * This Class provides the implementation of the server side, of each of the nodes.
@@ -29,7 +30,7 @@ public class RestServer implements Server {
     }
 
     @Override
-    public void provideRoutingTable(DatagramPacket incoming) {
+    public void provideRoutingTable(InetSocketAddress recipient) {
 
     }
 
@@ -37,6 +38,4 @@ public class RestServer implements Server {
     public void handleBroadcastRequest(String nodeName, DatagramPacket datagramPacket, String ipAddress, int port) {
 
     }
-
-
 }

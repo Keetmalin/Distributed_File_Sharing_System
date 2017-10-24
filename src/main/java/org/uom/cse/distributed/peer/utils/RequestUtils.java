@@ -56,25 +56,14 @@ public class RequestUtils {
     /**
      * Sends the UDP request through the given {@link DatagramSocket}. This is a blocking method call.
      *
-     * @param datagramSocket datagram socket
      * @throws IOException sending failures
      */
-    public static void sendObjectRequest(DatagramSocket datagramSocket, Object requestObject,
-            InetAddress address, int port) throws IOException {
-        logger.debug("Sending request Object to recipient {}:{}", address, port);
-
+    public static String buildObjectRequest(Object requestObject) throws IOException {
         //create a Byte Stream out of the object
         ByteArrayOutputStream baos = new ByteArrayOutputStream(6400);
         ObjectOutputStream oos = new ObjectOutputStream(baos);
         oos.writeObject(requestObject);
-        String base64 = Base64.getEncoder().encodeToString(baos.toByteArray());
-        byte[] data = base64.getBytes();
-
-        // Create a datagram packet to send to the recipient
-        DatagramPacket datagramPacket = new DatagramPacket(data, data.length, address, port);
-        // Send to recipient
-        datagramSocket.send(datagramPacket);
-        logger.debug("Datagram packet sent to recipient {}:{}", address, port);
+        return Base64.getEncoder().encodeToString(baos.toByteArray());
     }
 
 
@@ -86,14 +75,13 @@ public class RequestUtils {
      */
     public static void sendResponse(DatagramSocket datagramSocket, String response,
             InetAddress address, int port) throws IOException {
-        logger.debug("Sending response to recipient");
+        logger.debug("Sending response to recipient {}:{}", address, port);
 
         // Create a datagram packet to send to the recipient
         DatagramPacket datagramPacket = new DatagramPacket(response.getBytes(), response.length(), address, port);
         // Send to recipient
         datagramSocket.send(datagramPacket);
-        logger.debug("Datagram packet sent, listening for response", response);
-
+        logger.debug("Datagram packet sent to {}:{}", address, port);
     }
 
     /**

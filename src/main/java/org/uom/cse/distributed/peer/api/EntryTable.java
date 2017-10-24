@@ -30,7 +30,7 @@ public class EntryTable {
     private final Map<Character, Map<String, List<EntryTableEntry>>> entries = new ConcurrentHashMap<>();
 
     public void addCharacter(Character c) {
-        logger.info("Adding character {} to my entry table", c);
+        logger.info("Adding character [{}] to my entry table", c);
         entries.putIfAbsent(c, new HashMap<>());
     }
 
@@ -39,7 +39,7 @@ public class EntryTable {
             throw new IllegalArgumentException("Keyword and entry cannot be null");
         }
 
-        char c = keyword.charAt(0);
+        char c = keyword.toUpperCase().charAt(0);
 
         if (!entries.containsKey(c)) {
             throw new IllegalArgumentException("Character " + c + " is not in my entries");

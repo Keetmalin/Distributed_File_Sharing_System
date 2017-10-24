@@ -15,7 +15,7 @@ public class Constants {
     public static final int RETRIES_COUNT = 3;
     public static final int RETRY_TIMEOUT_MS = 5000;
 
-    public static final int ADDRESS_SPACE_SIZE = 180;
+    public static final int ADDRESS_SPACE_SIZE = 36;
     public static final int CHARACTER_SPACE_SIZE = 36;
     public static final int ADDRESSES_PER_CHARACTER = ADDRESS_SPACE_SIZE / CHARACTER_SPACE_SIZE;
 
@@ -35,11 +35,11 @@ public class Constants {
 
     /** Message commands to be used in client server communications **/
     public static final String GET_ROUTING_TABLE = "GETRTBL";
-    public static final String JOIN = "BCAST";
+    public static final String NEW_NODE = "NEWNODE";
     public static final String NEW_ENTRY = "NEWENTRY";
     public static final String HANDOVER = "HNDVR";
     public static final String NEW_NODE_ENTRY = "NEWNODE";
-    public static final String RESPONSE_OK = "ok";
+    public static final String RESPONSE_OK = "OK";
 
     /** File name generation and relevant constants **/
     public static final int MIN_FILE_COUNT = 3;

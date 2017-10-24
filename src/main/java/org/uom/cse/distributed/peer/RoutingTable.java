@@ -80,19 +80,19 @@ public class RoutingTable {
     }
 
     /**
-     * Finds the routing table entry corresponding to the nodeName. The entry can be the exact node of the successor of
+     * Finds the routing table entry corresponding to the nodeId. The entry can be the exact node of the successor of
      * that node.
      *
-     * @param nodeName Node name to be found in the routing table
+     * @param nodeId Node name to be found in the routing table
      * @return optional of entry
      */
-    public Optional<RoutingTableEntry> findNodeOrSuccessor(String nodeName) {
+    public Optional<RoutingTableEntry> findNodeOrSuccessor(int nodeId) {
         List<RoutingTableEntry> sortedEntries = this.entries.stream()
                 .sorted(Comparator.comparingInt(e -> Integer.parseInt(e.getNodeName())))
                 .collect(Collectors.toList());
 
         Optional<RoutingTableEntry> successor = sortedEntries.stream()
-                .filter(e -> Integer.parseInt(e.getNodeName()) >= Integer.parseInt(nodeName))
+                .filter(e -> Integer.parseInt(e.getNodeName()) >= nodeId)
                 .findFirst();
 
         if (successor.isPresent()) {
@@ -104,4 +104,52 @@ public class RoutingTable {
         }
     }
 
+    /**
+     * Finds the successor of a given node
+     *
+     * @param nodeId ID of the node of which we want to find the successor
+     * @return Optional
+     */
+    public Optional<RoutingTableEntry> findSuccessorOf(int nodeId) {
+        List<RoutingTableEntry> sortedEntries = this.entries.stream()
+                .sorted(Comparator.comparingInt(e -> Integer.parseInt(e.getNodeName())))
+                .collect(Collectors.toList());
+
+        Optional<RoutingTableEntry> successor = sortedEntries.stream()
+                .filter(e -> Integer.parseInt(e.getNodeName()) > nodeId)
+                .findFirst();
+
+        if (successor.isPresent() && Integer.parseInt(successor.get().getNodeName()) != nodeId) {
+            return successor;
+        } else if (sortedEntries.size() > 0 && Integer.parseInt(sortedEntries.get(0).getNodeName()) != nodeId) {
+            return Optional.of(sortedEntries.get(0));
+        }
+
+        return Optional.empty();
+    }
+
+    /**
+     * Finds the predecessor of a given node
+     *
+     * @param nodeId ID of the node of which we want to find the successor
+     * @return Optional
+     */
+    public Optional<RoutingTableEntry> findPredecessorOf(int nodeId) {
+        List<RoutingTableEntry> sortedEntries = this.entries.stream()
+                .sorted(Comparator.comparingInt(e -> Integer.parseInt(((RoutingTableEntry) e).getNodeName())).reversed())
+                .collect(Collectors.toList());
+
+        Optional<RoutingTableEntry> predecessor = sortedEntries.stream()
+                .filter(e -> Integer.parseInt(e.getNodeName()) < nodeId)
+                .findFirst();
+
+        if (predecessor.isPresent() && Integer.parseInt(predecessor.get().getNodeName()) != nodeId) {
+            return predecessor;
+        } else if (sortedEntries.size() > 0 &&
+                Integer.parseInt(sortedEntries.get(sortedEntries.size() - 1).getNodeName()) != nodeId) {
+            return Optional.of(sortedEntries.get(0));
+        }
+
+        return Optional.empty();
+    }
 }

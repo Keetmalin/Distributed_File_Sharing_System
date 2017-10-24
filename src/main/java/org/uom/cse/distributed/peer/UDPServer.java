@@ -12,12 +12,15 @@ import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static org.uom.cse.distributed.Constants.GET_ROUTING_TABLE;
-import static org.uom.cse.distributed.Constants.JOIN;
 import static org.uom.cse.distributed.Constants.NEW_ENTRY;
+import static org.uom.cse.distributed.Constants.NEW_NODE;
 import static org.uom.cse.distributed.Constants.RESPONSE_OK;
 import static org.uom.cse.distributed.Constants.RETRIES_COUNT;
+import static org.uom.cse.distributed.Constants.RETRY_TIMEOUT_MS;
 
 /**
  * This class implements the server side listening and handling of requests Via UDP - for each node in the Distributed
@@ -74,14 +77,16 @@ public class UDPServer implements Server {
                 datagramSocket.receive(incoming);
 
                 byte[] data = incoming.getData();
-                String incomingMsg = new String(data, 0, incoming.getLength());
-                logger.debug("Received from {}:{} - {}", incoming.getAddress(), incoming.getPort(), incomingMsg);
+                String request = new String(data, 0, incoming.getLength());
+                logger.debug("Received from {}:{} -> {}", incoming.getAddress(), incoming.getPort(), request);
 
-                try {
-                    handleRequest(incomingMsg, incoming);
-                } catch (Exception e) {
-                    logger.error("Error occurred when handling request", e);
-                }
+                executorService.submit(() -> {
+                    try {
+                        handleRequest(request, incoming);
+                    } catch (Exception e) {
+                        logger.error("Error occurred when handling request", e);
+                    }
+                });
             }
         } catch (IOException e) {
             logger.error("Error occurred when listening on port {}", port, e);
@@ -92,65 +97,78 @@ public class UDPServer implements Server {
     private void handleRequest(String request, DatagramPacket incoming) {
         String[] incomingResult = request.split(" ", 3);
 
-        logger.debug("Request length: {}", incomingResult[0]);
+        logger.debug("Request length -> {}", incomingResult[0]);
         String command = incomingResult[1];
-        logger.debug("Command: {}", command);
+        logger.debug("Command -> {}", command);
 
+        InetSocketAddress recipient = new InetSocketAddress(incoming.getAddress(), incoming.getPort());
         if (GET_ROUTING_TABLE.equals(command)) {
-            provideRoutingTable(incoming);
+            provideRoutingTable(recipient);
         } else if (NEW_ENTRY.equals(command)) {
             String[] tempList = incomingResult[2].split(" ", 3);
-            logger.debug("Adding entry to entry table: {}", tempList);
+            logger.debug("Adding entry to entry table -> {}", tempList);
             this.node.getEntryTable().addEntry(tempList[0], new EntryTableEntry(tempList[1], tempList[2]));
-        } else if (JOIN.equals(command)) {
+            retryOrTimeout(RESPONSE_OK, new InetSocketAddress(incoming.getAddress(), incoming.getPort()));
+        } else if (NEW_NODE.equals(command)) {
             //String ipAddress = st.nextToken();
             //int port = Integer.parseInt(st.nextToken());
             //                    handleBroadcastRequest(nodeName, incoming, ipAddress, port);
         }
-
     }
 
     @Override
-    public void provideRoutingTable(DatagramPacket incoming) {
-        int retriesLeft = numOfRetries;
-        while (retriesLeft > 0) {
-            try (DatagramSocket datagramSocket = new DatagramSocket()) {
-                RequestUtils.sendObjectRequest(datagramSocket, this.node.getRoutingTable().getEntries(),
-                        incoming.getAddress(), incoming.getPort());
-                logger.debug("Routing table entries provided to the recipient: {}", incoming.getAddress(), incoming.getPort());
-                break;
-            } catch (IOException e) {
-                logger.error("Error occurred when sending the response", e);
-                retriesLeft--;
-            }
+    public void provideRoutingTable(InetSocketAddress recipient) {
+        logger.debug("Returning routing table to -> {}", recipient);
+        String response = null;
+        try {
+            response = RequestUtils.buildObjectRequest(this.node.getRoutingTable().getEntries());
+        } catch (IOException e) {
+            logger.error("Error occurred when building object request: {}", e);
         }
+        retryOrTimeout(response, recipient);
+        logger.debug("Routing table entries provided to the recipient: {}", recipient);
     }
 
     @Override
     public void handleBroadcastRequest(String nodeName, DatagramPacket datagramPacket, String ipAddress, int port) {
-
         InetSocketAddress inetSocketAddress = new InetSocketAddress(ipAddress, port);
         RoutingTableEntry routingTableEntry = new RoutingTableEntry(inetSocketAddress, nodeName);
-
         this.node.getRoutingTable().addEntry(routingTableEntry);
+        retryOrTimeout(RESPONSE_OK, new InetSocketAddress(ipAddress, port));
+    }
 
+    /**
+     * This method retries a given response or times out of that response fails. Tries for maximum of {@link
+     * UDPCommunicationProvider#numOfRetries}
+     *
+     * @param response response to be sent
+     * @param peer     to whom the response is sent
+     * @return true if successful | false if failed
+     */
+    private boolean retryOrTimeout(String response, InetSocketAddress peer) {
         int retriesLeft = numOfRetries;
         while (retriesLeft > 0) {
-            try (DatagramSocket datagramSocket = new DatagramSocket()) {
-                //TODO Return files belonging to that node
-                RequestUtils.sendResponse(datagramSocket, RESPONSE_OK, datagramPacket.getAddress(),
-                        datagramPacket.getPort());
-                logger.debug("Response Ok sent to the recipient");
+            Future<Void> task = executorService.submit(() -> {
+                try (DatagramSocket datagramSocket = new DatagramSocket()) {
+                    RequestUtils.sendResponse(datagramSocket, response, peer.getAddress(), peer.getPort());
+                    return null;
+                }
+            });
 
-            } catch (IOException e) {
-                logger.error("Error occurred when sending the response", e);
+            try {
+                task.get(RETRY_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+                return true;
+            } catch (Exception e) {
+                logger.error("Error occurred when completing response({}) to peer- {}. Error: {}", response, peer, e);
+                task.cancel(true);
                 retriesLeft--;
             }
-
         }
 
-
+        logger.error("RESPONSE FAILED !!! ({} -> {})", response, peer);
+        return false;
     }
+
 
     public void stop() {
         if (started) {

@@ -56,6 +56,7 @@ public class Node {
     private final String ipAddress;
     private final int port;
     private int nodeId;
+    private char myChar;
 
     private BootstrapProvider bootstrapProvider = new UDPBootstrapProvider();
 
@@ -117,9 +118,20 @@ public class Node {
 
         // 3. Select a Node Name
         this.nodeId = selectNodeName();
-        logger.info("Selected node ID - {}", nodeId);
+        logger.info("Selected node ID -> {}", this.nodeId);
 
-        // 4. Broadcast that I have joined the network to all entries in the routing table
+        // 4. Select my characters
+        myChar = HashUtils.nodeIdToChar(this.nodeId);
+        logger.info("My char is -> {}", myChar);
+        entryTable.addCharacter(myChar);
+
+        Optional<RoutingTableEntry> myPredecessor = routingTable.findPredecessorOf(this.nodeId);
+        Set<Character> characters = HashUtils.findCharactersOf(this.nodeId, myPredecessor.map(routingTableEntry ->
+                Integer.parseInt(routingTableEntry.getNodeName())).orElse(this.nodeId));
+        characters.forEach(entryTable::addCharacter);
+
+
+        // 5. Broadcast that I have joined the network to all entries in the routing table
         this.routingTable.getEntries().forEach(entry -> {
             //TODO check the Notify other nodes broadcast
             Map<Character, Map<String, List<EntryTableEntry>>> toBeUndertaken = communicationProvider.notifyNewNode(
@@ -141,24 +153,28 @@ public class Node {
             });
         });
 
-        // 5 Add my node to my routing table
-        routingTable.addEntry(new RoutingTableEntry(new InetSocketAddress(ipAddress, port), String.valueOf(nodeId)));
+        // 6. Add my node to my routing table
+        routingTable.addEntry(new RoutingTableEntry(new InetSocketAddress(ipAddress, port), String.valueOf(this.nodeId)));
+        logger.debug("My routing table is -> {}", routingTable.getEntries());
 
-        // 6. Send my files to corresponding nodes.
+        // 7. Send my files to corresponding nodes.
         myFiles.addAll(getMyFiles());
         myFiles.forEach(file -> {
             String keywords[] = file.split(" ");
             Stream.of(keywords).forEach(keyword -> {
                 int nodeId = HashUtils.keywordToNodeId(keyword);
-                Optional<RoutingTableEntry> entry = routingTable.findNodeOrSuccessor(String.valueOf(nodeId));
+                logger.debug("NodeId -> {} to index keyword -> {}", nodeId, keyword);
+                Optional<RoutingTableEntry> entry = routingTable.findNodeOrSuccessor(nodeId);
+                logger.debug("Searching for node or successor in routing table -> {}", entry);
 
                 // Usually an entry should be present.
-                if (entry.isPresent()) {
+                if (entry.isPresent() && Integer.valueOf(entry.get().getNodeName()) != this.nodeId) {
                     logger.info("Offering keyword ({}-{}) to Node - {}", keyword, file, entry.get());
                     communicationProvider.offerFile(entry.get().getAddress(), keyword, this.nodeId, file);
                 } else {
                     // I should take over this file name
                     logger.info("I'm indexing ({}-{})", keyword, file);
+                    entryTable.addEntry(keyword, new EntryTableEntry(String.valueOf(this.nodeId), file));
                 }
             });
         });
