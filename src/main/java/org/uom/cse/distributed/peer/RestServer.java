@@ -2,7 +2,6 @@ package org.uom.cse.distributed.peer;
 
 import org.uom.cse.distributed.peer.api.Server;
 
-import java.net.DatagramPacket;
 import java.net.InetSocketAddress;
 
 /**
@@ -35,7 +34,7 @@ public class RestServer implements Server {
     }
 
     @Override
-    public void handleBroadcastRequest(String nodeName, DatagramPacket datagramPacket, String ipAddress, int port) {
+    public void handleNewNodeRequest(String request, InetSocketAddress recipient) {
 
     }
 }

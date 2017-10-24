@@ -21,10 +21,11 @@ import java.util.concurrent.TimeUnit;
 import static org.uom.cse.distributed.Constants.GET_ROUTING_TABLE;
 import static org.uom.cse.distributed.Constants.NEW_ENTRY;
 import static org.uom.cse.distributed.Constants.NEW_NODE;
+import static org.uom.cse.distributed.Constants.QUERY;
+import static org.uom.cse.distributed.Constants.RESPONSE_FAILURE;
 import static org.uom.cse.distributed.Constants.RESPONSE_OK;
 import static org.uom.cse.distributed.Constants.RETRIES_COUNT;
 import static org.uom.cse.distributed.Constants.RETRY_TIMEOUT_MS;
-import static org.uom.cse.distributed.Constants.*;
 
 /**
  * This class implements the server side listening and handling of requests Via UDP - for each node in the Distributed
@@ -67,6 +68,7 @@ public class UDPServer implements Server {
         });
 
         started = true;
+        logger.info("Server started");
         Runtime.getRuntime().addShutdownHook(new Thread(this::stop));
     }
 
@@ -88,7 +90,8 @@ public class UDPServer implements Server {
                     try {
                         handleRequest(request, incoming);
                     } catch (Exception e) {
-                        logger.error("Error occurred when handling request", e);
+                        logger.error("Error occurred when handling request ({})", request, e);
+                        retryOrTimeout(RESPONSE_FAILURE, new InetSocketAddress(incoming.getAddress(), incoming.getPort()));
                     }
                 });
             }
@@ -98,50 +101,55 @@ public class UDPServer implements Server {
         }
     }
 
-    private void handleRequest(String request, DatagramPacket incoming) {
+    private void handleRequest(String request, DatagramPacket incoming) throws IOException {
         String[] incomingResult = request.split(" ", 3);
-
         logger.debug("Request length -> {}", incomingResult[0]);
         String command = incomingResult[1];
         logger.debug("Command -> {}", command);
 
         InetSocketAddress recipient = new InetSocketAddress(incoming.getAddress(), incoming.getPort());
-        if (GET_ROUTING_TABLE.equals(command)) {
-            provideRoutingTable(recipient);
-        } else if (NEW_ENTRY.equals(command)) {
-            String[] tempList = incomingResult[2].split(" ", 3);
-            logger.debug("Adding entry to entry table -> {}", tempList);
-            this.node.getEntryTable().addEntry(tempList[0], new EntryTableEntry(tempList[1], tempList[2]));
-        } else if (QUERY.equals(command)) {
-            String[] tempList = incomingResult[2].split(" ");
-            InetSocketAddress[] inetSocketAddresses = getNodeList(searchEntryTable(tempList[0], tempList[1]));
-            provideAddressArray(incoming, inetSocketAddresses);
-        } else if (NEW_NODE.equals(command)) {
-            //String ipAddress = st.nextToken();
-            //int port = Integer.parseInt(st.nextToken());
-            //                    handleBroadcastRequest(nodeName, incoming, ipAddress, port);
+        switch (command) {
+            case GET_ROUTING_TABLE:
+                provideRoutingTable(recipient);
+                break;
+            case NEW_NODE:
+                handleNewNodeRequest(incomingResult[2], recipient);
+                break;
+            case NEW_ENTRY:
+                String[] list = incomingResult[2].split(" ", 3);
+                logger.debug("Adding entry to entry table -> {}", list);
+                this.node.getEntryTable().addEntry(list[0], new EntryTableEntry(list[1], list[2]));
+                retryOrTimeout(RESPONSE_OK, recipient);
+                break;
+            case QUERY:
+                String[] parts = incomingResult[2].split(" ");
+                InetSocketAddress[] inetSocketAddresses = getNodeList(searchEntryTable(parts[0], parts[1]));
+                provideAddressArray(recipient, inetSocketAddresses);
+                break;
         }
     }
 
     @Override
-    public void provideRoutingTable(InetSocketAddress recipient) {
+    public void provideRoutingTable(InetSocketAddress recipient) throws IOException {
         logger.debug("Returning routing table to -> {}", recipient);
-        String response = null;
+        String response;
         try {
             response = RequestUtils.buildObjectRequest(this.node.getRoutingTable().getEntries());
         } catch (IOException e) {
             logger.error("Error occurred when building object request: {}", e);
+            throw e;
         }
         retryOrTimeout(response, recipient);
         logger.debug("Routing table entries provided to the recipient: {}", recipient);
     }
 
     @Override
-    public void handleBroadcastRequest(String nodeName, DatagramPacket datagramPacket, String ipAddress, int port) {
-        InetSocketAddress inetSocketAddress = new InetSocketAddress(ipAddress, port);
-        RoutingTableEntry routingTableEntry = new RoutingTableEntry(inetSocketAddress, nodeName);
+    public void handleNewNodeRequest(String request, InetSocketAddress recipient) {
+        String[] parts = request.split(" ");
+        InetSocketAddress inetSocketAddress = new InetSocketAddress(parts[0], Integer.parseInt(parts[1]));
+        RoutingTableEntry routingTableEntry = new RoutingTableEntry(inetSocketAddress, parts[2]);
         this.node.getRoutingTable().addEntry(routingTableEntry);
-        retryOrTimeout(RESPONSE_OK, new InetSocketAddress(ipAddress, port));
+        retryOrTimeout(RESPONSE_OK, recipient);
     }
 
     /**
@@ -177,31 +185,21 @@ public class UDPServer implements Server {
     }
 
 
-    @Override
-    public void stop() {
-        if (started) {
-            started = false;
-            executorService.shutdownNow();
+    private void provideAddressArray(InetSocketAddress recipient, InetSocketAddress[] inetSocketAddresses) throws IOException {
+        logger.debug("Returning addresses {} to -> {}", inetSocketAddresses, recipient);
+        String response;
+        try {
+            response = RequestUtils.buildObjectRequest(inetSocketAddresses);
+        } catch (IOException e) {
+            logger.error("Error occurred when building object request: {}", e);
+            throw e;
         }
-    }
 
-    private void provideAddressArray(DatagramPacket datagramPacket, InetSocketAddress[] inetSocketAddresses) {
-        int retriesLeft = numOfRetries;
-        while (retriesLeft > 0) {
-            try (DatagramSocket datagramSocket = new DatagramSocket()) {
-                RequestUtils.sendObjectRequest(datagramSocket, inetSocketAddresses,
-                        datagramPacket.getAddress(), datagramPacket.getPort());
-                logger.debug("Array of node addresses provided to the recipient: {}", datagramPacket.getAddress(), datagramPacket.getPort());
-                break;
-            } catch (IOException e) {
-                logger.error("Error occurred when sending the response", e);
-                retriesLeft--;
-            }
-        }
+        retryOrTimeout(response, recipient);
+        logger.debug("Array of node addresses provided to the recipient: {}", recipient);
     }
 
     private List<String> searchEntryTable(String keyword, String fileName) {
-
         char c = keyword.charAt(0);
         List<EntryTableEntry> entryList = this.node.getEntryTable().getEntries().get(c).get(keyword);
         List<String> results = new ArrayList<String>();
@@ -217,11 +215,10 @@ public class UDPServer implements Server {
     }
 
     private InetSocketAddress[] getNodeList(List<String> nodeNameList) {
-
         Set<RoutingTableEntry> entries = this.node.getRoutingTable().getEntries();
         InetSocketAddress[] inetSocketAddresses = new InetSocketAddress[nodeNameList.size()];
-        int i = 0;
 
+        int i = 0;
         for (RoutingTableEntry routingTableEntry : entries) {
             if (nodeNameList.contains(routingTableEntry.getNodeName())) {
                 inetSocketAddresses[i] = routingTableEntry.getAddress();
@@ -231,5 +228,11 @@ public class UDPServer implements Server {
         return inetSocketAddresses;
     }
 
-
+    @Override
+    public void stop() {
+        if (started) {
+            started = false;
+            executorService.shutdownNow();
+        }
+    }
 }

@@ -2,7 +2,7 @@ package org.uom.cse.distributed.peer.api;
 
 import org.uom.cse.distributed.peer.Node;
 
-import java.net.DatagramPacket;
+import java.io.IOException;
 import java.net.InetSocketAddress;
 
 /**
@@ -36,15 +36,13 @@ public interface Server {
      *
      * @param recipient The client who sent the incoming packet
      */
-    void provideRoutingTable(InetSocketAddress recipient);
+    void provideRoutingTable(InetSocketAddress recipient) throws IOException;
 
     /**
      * this gets the current nodes routing table and pass it down to whoever is requesting is
      *
-     * @param nodeName       name of the nodeID of the new node that sent the request
-     * @param datagramPacket {@link DatagramPacket} the incoming packet handed over with the request
-     * @param ipAddress      IP Address of the node that sent he request
-     * @param port           port number of the node that sent the request
+     * @param request   Request received
+     * @param recipient The client who is sending the request
      */
-    void handleBroadcastRequest(String nodeName, DatagramPacket datagramPacket, String ipAddress, int port);
+    void handleNewNodeRequest(String request, InetSocketAddress recipient);
 }

@@ -43,6 +43,7 @@ public class Constants {
     public static final String HANDOVER = "HNDVR";
     public static final String NEW_NODE_ENTRY = "NEWNODE";
     public static final String RESPONSE_OK = "OK";
+    public static final String RESPONSE_FAILURE = "FAILED";
 
     /** File name generation and relevant constants **/
     public static final int MIN_FILE_COUNT = 3;

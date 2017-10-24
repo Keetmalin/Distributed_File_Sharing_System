@@ -21,7 +21,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import static org.uom.cse.distributed.Constants.*;
+import static org.uom.cse.distributed.Constants.GET_ROUTING_TABLE;
+import static org.uom.cse.distributed.Constants.NEWENTRY_MSG_FORMAT;
+import static org.uom.cse.distributed.Constants.NEWNODE_MSG_FORMAT;
+import static org.uom.cse.distributed.Constants.QUERY_MSG_FORMAT;
+import static org.uom.cse.distributed.Constants.RETRIES_COUNT;
+import static org.uom.cse.distributed.Constants.RETRY_TIMEOUT_MS;
 
 /**
  * Provides UDP Socket Based communication with Peers
@@ -90,7 +95,7 @@ public class UDPCommunicationProvider extends CommunicationProvider {
     @Override
     public Set<InetSocketAddress> searchFullFile(InetSocketAddress targetNode, String fileName, String keyword) {
         String request = String.format(QUERY_MSG_FORMAT, keyword, fileName);
-        logger.debug("Searching filename: {} , with keyword: {} in the network" , fileName, keyword);
+        logger.debug("Searching filename: {} , with keyword: {} in the network", fileName, keyword);
         String response = retryOrTimeout(request, targetNode);
         logger.debug("Received response: {}", response);
 
@@ -136,6 +141,7 @@ public class UDPCommunicationProvider extends CommunicationProvider {
             }
         }
 
+        // TODO: 10/24/17 This means that node should be down. Do something
         logger.error("REQUEST FAILED !!! ({} -> {})", request, peer);
         return null;
     }
