@@ -3,6 +3,8 @@
  */
 package org.uom.cse.distributed.peer.api;
 
+import org.uom.cse.distributed.peer.Node;
+
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;
@@ -16,7 +18,7 @@ import java.util.Set;
  */
 public abstract class CommunicationProvider {
 
-    public abstract void start();
+    public abstract void start(Node node);
 
     public abstract void stop();
 
@@ -56,7 +58,7 @@ public abstract class CommunicationProvider {
      * @param node    name of node that contains the file
      * @param file    file name to be sent
      */
-    public abstract void offerFile(InetSocketAddress peer, String keyword, int node, String file);
+    public abstract boolean offerFile(InetSocketAddress peer, String keyword, int node, String file);
 
     /**
      * This will search for a file name in the entire system and return the list of nodes {@link InetSocketAddress}

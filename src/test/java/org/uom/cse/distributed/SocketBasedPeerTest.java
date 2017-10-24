@@ -65,7 +65,7 @@ public class SocketBasedPeerTest {
         });
     }
 
-//    @Test(threadPoolSize = 5, invocationCount = 5)
+    //    @Test(threadPoolSize = 5, invocationCount = 5)
     public void testNodeInitializationParallel() throws InterruptedException {
         Node node = new Node(atomicInteger.getAndIncrement());
         node.start();

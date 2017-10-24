@@ -7,7 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -32,13 +32,14 @@ public class RoutingTable {
 
     private static final Logger logger = LoggerFactory.getLogger(RoutingTable.class);
 
-    private final Set<RoutingTableEntry> entries = Collections.synchronizedSet(new HashSet<>());
+    private final Set<RoutingTableEntry> entries = new HashSet<>();
+    private final List<RoutingTableListener> listeners = new ArrayList<>();
 
     public Set<RoutingTableEntry> getEntries() {
         return new HashSet<>(entries);
     }
 
-    public void addEntry(RoutingTableEntry entry) {
+    public synchronized void addEntry(RoutingTableEntry entry) {
         List<RoutingTableEntry> duplicates = this.entries.stream()
                 .filter(e -> e.getAddress().equals(entry.getAddress()))
                 .collect(Collectors.toList());
@@ -46,6 +47,7 @@ public class RoutingTable {
         if (duplicates.size() == 0) {
             logger.debug("Adding entry: {} to the routing table", entry);
             this.entries.add(entry);
+            notifyListeners(entry, true);
         } else if (duplicates.stream().filter(e -> e.getNodeName().equals(entry.getNodeName())).count() == 1) {
             logger.warn("Entry : {} already exists", entry);
         } else {
@@ -53,17 +55,40 @@ public class RoutingTable {
             RoutingTableEntry e = duplicates.get(0);
             logger.warn("Correcting entry {} to {}", e, entry);
             e.setNodeName(entry.getNodeName());
+            notifyListeners(entry, true);
         }
     }
 
-    public boolean removeEntry(RoutingTableEntry e) {
-        return this.entries.remove(e);
+    public synchronized boolean removeEntry(RoutingTableEntry e) {
+        if (this.entries.remove(e)) {
+            logger.info("Removed entry -> {}", e);
+            notifyListeners(e, false);
+            return true;
+        }
+
+        return false;
+    }
+
+    public synchronized boolean removeEntry(InetSocketAddress node) {
+        Optional<RoutingTableEntry> entry = this.entries.stream()
+                .filter(e -> e.getAddress().getAddress().equals(node.getAddress()) &&
+                        e.getAddress().getPort() == node.getPort())
+                .findFirst();
+
+        if (entry.isPresent()) {
+            this.entries.remove(entry.get());
+            logger.info("Removed entry -> {}", entry);
+            notifyListeners(entry.get(), false);
+            return true;
+        }
+
+        return false;
     }
 
     /**
      * Removes all the entries in the routing table and clears it.
      */
-    public void clear() {
+    public synchronized void clear() {
         this.entries.clear();
     }
 
@@ -150,5 +175,25 @@ public class RoutingTable {
         }
 
         return Optional.empty();
+    }
+
+    private void notifyListeners(RoutingTableEntry entry, boolean added) {
+        this.listeners.forEach(listener -> {
+            if (added) {
+                listener.entryAdded(entry);
+            } else {
+                listener.entryRemoved(entry);
+            }
+        });
+    }
+
+    public void addListener(RoutingTableListener listener) {
+        if (!this.listeners.contains(listener)) {
+            this.listeners.add(listener);
+        }
+    }
+
+    public void removeListener(RoutingTableListener listener) {
+        this.listeners.remove(listener);
     }
 }

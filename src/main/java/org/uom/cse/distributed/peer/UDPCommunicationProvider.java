@@ -40,8 +40,11 @@ public class UDPCommunicationProvider extends CommunicationProvider {
     private static final Logger logger = LoggerFactory.getLogger(Node.class);
     private final int numOfRetries = RETRIES_COUNT;
     private ExecutorService executorService;
+    private Node node;
 
-    public void start() {
+    @Override
+    public void start(Node node) {
+        this.node = node;
         executorService = Executors.newCachedThreadPool();
         logger.info("Communication provider started");
     }
@@ -90,12 +93,13 @@ public class UDPCommunicationProvider extends CommunicationProvider {
     }
 
     @Override
-    public void offerFile(InetSocketAddress peer, String keyword, int nodeId, String file) {
+    public boolean offerFile(InetSocketAddress peer, String keyword, int nodeId, String file) {
         String msg = String.format(NEWENTRY_MSG_FORMAT, keyword, nodeId, file);
         String request = RequestUtils.buildRequest(msg);
         logger.debug("Offering file with request: {}", request);
         String response = retryOrTimeout(request, peer);
         logger.debug("Received response: {}", response);
+        return response != null;
     }
 
     @Override
@@ -147,8 +151,8 @@ public class UDPCommunicationProvider extends CommunicationProvider {
             }
         }
 
-        // TODO: 10/24/17 This means that node should be down. Do something
         logger.error("REQUEST FAILED !!! ({} -> {})", request, peer);
+        this.node.removeNode(peer);
         return null;
     }
 

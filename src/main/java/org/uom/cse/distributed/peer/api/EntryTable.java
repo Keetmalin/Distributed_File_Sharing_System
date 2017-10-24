@@ -28,6 +28,7 @@ public class EntryTable {
     private final Map<Character, Map<String, List<EntryTableEntry>>> entries = new HashMap<>();
 
     public synchronized void addCharacter(Character c) {
+        c = Character.toUpperCase(c);
         logger.info("Adding character [{}] to my entry table", c);
         entries.putIfAbsent(c, new HashMap<>());
     }

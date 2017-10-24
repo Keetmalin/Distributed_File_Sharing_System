@@ -2,15 +2,7 @@ package org.uom.cse.distributed.peer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.uom.cse.distributed.peer.api.BootstrapProvider;
-import org.uom.cse.distributed.peer.api.CommunicationProvider;
-import org.uom.cse.distributed.peer.api.EntryTable;
-import org.uom.cse.distributed.peer.api.EntryTableEntry;
-import org.uom.cse.distributed.peer.api.RoutingTable;
-import org.uom.cse.distributed.peer.api.RoutingTableEntry;
-import org.uom.cse.distributed.peer.api.Server;
-import org.uom.cse.distributed.peer.api.State;
-import org.uom.cse.distributed.peer.api.StateManager;
+import org.uom.cse.distributed.peer.api.*;
 import org.uom.cse.distributed.peer.utils.HashUtils;
 
 import java.io.IOException;
@@ -39,7 +31,7 @@ import static org.uom.cse.distributed.peer.api.State.REGISTERED;
  * @author Imesha Sudasingha
  * @author Keet Sugathadasa
  */
-public class Node {
+public class Node implements RoutingTableListener {
 
     private static final Logger logger = LoggerFactory.getLogger(Node.class);
 
@@ -83,10 +75,13 @@ public class Node {
     public void start() {
         stateManager.checkState(State.IDLE);
 
+        Runtime.getRuntime().addShutdownHook(new Thread(this::stop));
+
         executorService = Executors.newScheduledThreadPool(2);
+        routingTable.addListener(this);
 
         server.start(this);
-        communicationProvider.start();
+        communicationProvider.start(this);
         udpQuery.initialize(this);
 
         logger.debug("Connecting to the distributed network");
@@ -110,45 +105,71 @@ public class Node {
             }
         }
 
-        // 3. Select a Node Name
+        //        try {
+        //            logger.debug("Waiting for random time period before configuring");
+        //            Thread.sleep(new Random().nextInt(20000));
+        //        } catch (InterruptedException ignored) { }
+
+        // 1. Select a Node Name
         this.nodeId = selectNodeName();
         logger.info("Selected node ID -> {}", this.nodeId);
 
-        // 4. Select my characters
+        // 2. Add my node to my routing table
+        routingTable.addEntry(new RoutingTableEntry(new InetSocketAddress(ipAddress, port), String.valueOf(this.nodeId)));
+        logger.debug("My routing table is -> {}", routingTable.getEntries());
+
+        // 3. Select my character
         myChar = HashUtils.nodeIdToChar(this.nodeId);
         logger.info("My char is -> {}", myChar);
-        entryTable.addCharacter(myChar);
 
+        refresh();
+
+        // TODO: 10/24/17 Periodic synchronization
+        /*
+         * 1. First, get 2 random entries from the routing table.
+         * 2. Then ask them for routing tables. -> Update mine with that.
+         * 3. Then, send SYNC request to all nodes ... ????
+         */
+        stateManager.setState(CONFIGURED);
+    }
+
+    private void refresh() {
+        // Calculate my characters
         Optional<RoutingTableEntry> myPredecessor = routingTable.findPredecessorOf(this.nodeId);
         logger.debug("My predecessor is -> {}", myPredecessor);
         Set<Character> characters = HashUtils.findCharactersOf(this.nodeId, myPredecessor.map(routingTableEntry ->
                 Integer.parseInt(routingTableEntry.getNodeName())).orElse(this.nodeId));
+        characters.add(myChar);
         characters.forEach(entryTable::addCharacter);
 
+        // Remove any redundant character
+        //        entryTable.getEntries().keySet().stream()
+        //                .filter(character -> !characters.contains(character))
+        //                .forEach(entryTable::removeCharacter);
+
         // 5. Broadcast that I have joined the network to all entries in the routing table
-        this.routingTable.getEntries().forEach(entry -> {
-            Map<Character, Map<String, List<EntryTableEntry>>> toBeUndertaken = communicationProvider.notifyNewNode(
-                    entry.getAddress(), new InetSocketAddress(ipAddress, port), this.nodeId);
+        this.routingTable.getEntries().stream()
+                .filter(entry -> Integer.parseInt(entry.getNodeName()) != this.nodeId)
+                .forEach(entry -> {
+                    Map<Character, Map<String, List<EntryTableEntry>>> toBeUndertaken =
+                            communicationProvider.notifyNewNode(
+                                    entry.getAddress(), new InetSocketAddress(ipAddress, port), this.nodeId);
 
-            toBeUndertaken.forEach((letter, keywordMap) -> {
-                logger.info("Undertaking letter [{}] and keywords -> {}", letter, keywordMap);
+                    toBeUndertaken.forEach((letter, keywordMap) -> {
+                        logger.info("Undertaking letter [{}] and keywords -> {}", letter, keywordMap);
 
-                // First put the letter [A-Z0-9]
-                entryTable.addCharacter(letter);
+                        // First put the letter [A-Z0-9]
+                        entryTable.addCharacter(letter);
 
-                // Then put the keywords under each letter
-                keywordMap.forEach((keyword, entryTableEntries) -> {
-                    entryTableEntries.forEach(entryTableEntry -> {
-                        logger.debug("Adding entry-{} for keyword: {} to entry table", entryTableEntry, keyword);
-                        entryTable.addEntry(keyword, entryTableEntry);
+                        // Then put the keywords under each letter
+                        keywordMap.forEach((keyword, entryTableEntries) -> {
+                            entryTableEntries.forEach(entryTableEntry -> {
+                                logger.debug("Adding entry-{} for keyword: {} to entry table", entryTableEntry, keyword);
+                                entryTable.addEntry(keyword, entryTableEntry);
+                            });
+                        });
                     });
                 });
-            });
-        });
-
-        // 6. Add my node to my routing table
-        routingTable.addEntry(new RoutingTableEntry(new InetSocketAddress(ipAddress, port), String.valueOf(this.nodeId)));
-        logger.debug("My routing table is -> {}", routingTable.getEntries());
 
         // 7. Send my files to corresponding nodes.
         myFiles.addAll(generateMyFiles());
@@ -162,8 +183,15 @@ public class Node {
 
                 // Usually an entry should be present.
                 if (entry.isPresent() && Integer.valueOf(entry.get().getNodeName()) != this.nodeId) {
-                    logger.info("Offering keyword ({}-{}) to Node - {}", keyword, file, entry.get());
-                    communicationProvider.offerFile(entry.get().getAddress(), keyword, this.nodeId, file);
+                    logger.info("Offering keyword ({}-{}) to Node -> {}", keyword, file, entry.get());
+
+                    // Couldn't notify the actual owner. Keeping with myself
+                    if (!communicationProvider.offerFile(entry.get().getAddress(), keyword, this.nodeId, file)) {
+                        logger.warn("Unable to offer file ({} -> {}) to node -> {}. Keeping with me",
+                                keyword, file, entry.get());
+                        entryTable.addCharacter(keyword.charAt(0));
+                        entryTable.addEntry(keyword, new EntryTableEntry(String.valueOf(this.nodeId), file));
+                    }
                 } else {
                     // I should take over this file name
                     logger.info("I'm indexing ({}-{})", keyword, file);
@@ -172,13 +200,6 @@ public class Node {
             });
         });
 
-        // TODO: 10/24/17 Periodic synchronization
-        /*
-         * 1. First, get 2 random entries from the routing table.
-         * 2. Then ask them for routing tables. -> Update mine with that.
-         * 3. Then, send SYNC request to all nodes ... ????
-         */
-        stateManager.setState(CONFIGURED);
     }
 
     /**
@@ -276,6 +297,15 @@ public class Node {
         return myFiles;
     }
 
+    /**
+     * Removes the given entry from the routing table
+     *
+     * @param node IP and port of the node to be removed
+     */
+    public void removeNode(InetSocketAddress node) {
+        logger.warn("Attempting to remove routing table entry -> {} from routing table", node);
+        this.routingTable.removeEntry(node);
+    }
 
     public void addNewNode(String ipAddress, int newNodePort, int newNodeId) {
         InetSocketAddress inetSocketAddress = new InetSocketAddress(ipAddress, newNodePort);
@@ -351,6 +381,7 @@ public class Node {
 
         communicationProvider.stop();
         server.stop();
+        routingTable.removeListener(this);
         executorService.shutdownNow();
         try {
             executorService.awaitTermination(GRACE_PERIOD_MS, TimeUnit.MILLISECONDS);
@@ -400,8 +431,12 @@ public class Node {
     }
 
     @Override
-    public void finalize() throws Throwable {
-        stop();
-        super.finalize();
+    public void entryAdded(RoutingTableEntry entry) {
+        //        executorService.submit(this::refresh);
+    }
+
+    @Override
+    public void entryRemoved(RoutingTableEntry entry) {
+        //        executorService.submit(this::refresh);
     }
 }
