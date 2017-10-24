@@ -47,8 +47,8 @@ public abstract class CommunicationProvider {
      * @param nodeId My node ID. This is used to determine what are the keywords that I'm going to look at.
      * @return Map of keyword and node mappings which should be undertaken by me from this point onwards.
      */
-    public abstract Map<String, Map<String, List<Integer>>> notifyNewNode(InetSocketAddress peer, InetSocketAddress me,
-            int nodeId);
+    public abstract Map<Character, Map<String, List<EntryTableEntry>>> notifyNewNode(InetSocketAddress peer,
+            InetSocketAddress me, int nodeId);
 
     /**
      * Sends the given file and keyword to the node given by {@link InetSocketAddress} to be indexed.
@@ -58,5 +58,5 @@ public abstract class CommunicationProvider {
      * @param node    name of node that contains the file
      * @param file    file name to be sent
      */
-    public abstract void offerFile(InetSocketAddress peer, String keyword, String node, String file);
+    public abstract void offerFile(InetSocketAddress peer, String keyword, int node, String file);
 }

@@ -4,6 +4,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.uom.cse.distributed.peer.api.BootstrapProvider;
 import org.uom.cse.distributed.peer.api.CommunicationProvider;
+import org.uom.cse.distributed.peer.api.EntryTable;
+import org.uom.cse.distributed.peer.api.EntryTableEntry;
 import org.uom.cse.distributed.peer.api.Server;
 import org.uom.cse.distributed.peer.api.State;
 import org.uom.cse.distributed.peer.api.StateManager;
@@ -11,11 +13,23 @@ import org.uom.cse.distributed.peer.utils.HashUtils;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Random;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.uom.cse.distributed.Constants.*;
+import static org.uom.cse.distributed.Constants.ADDRESSES_PER_CHARACTER;
+import static org.uom.cse.distributed.Constants.ADDRESS_SPACE_SIZE;
+import static org.uom.cse.distributed.Constants.FILE_NAME_ARRAY;
+import static org.uom.cse.distributed.Constants.MAX_FILE_COUNT;
+import static org.uom.cse.distributed.Constants.MIN_FILE_COUNT;
 import static org.uom.cse.distributed.peer.api.State.CONFIGURED;
 import static org.uom.cse.distributed.peer.api.State.CONNECTED;
 import static org.uom.cse.distributed.peer.api.State.IDLE;
@@ -34,7 +48,6 @@ public class Node {
     private final StateManager stateManager = new StateManager(IDLE);
     private final RoutingTable routingTable = new RoutingTable();
     private final EntryTable entryTable = new EntryTable();
-    private final Map<String, Map<String, List<Integer>>> fileMappings = new HashMap<>();
     private final List<String> myFiles = new ArrayList<>();
 
     private final CommunicationProvider communicationProvider;
@@ -108,23 +121,20 @@ public class Node {
         // 4. Broadcast that I have joined the network to all entries in the routing table
         this.routingTable.getEntries().forEach(entry -> {
             //TODO check the Notify other nodes broadcast
-            Map<String, Map<String, List<Integer>>> toBeUndertaken = communicationProvider.notifyNewNode(
+            Map<Character, Map<String, List<EntryTableEntry>>> toBeUndertaken = communicationProvider.notifyNewNode(
                     entry.getAddress(), new InetSocketAddress(ipAddress, port), this.nodeId);
 
             toBeUndertaken.forEach((letter, keywordMap) -> {
                 logger.info("Undertaking letter '{}' and keywords : {}", letter, keywordMap);
 
                 // First put the letter [A-Z0-9]
-                fileMappings.putIfAbsent(letter, new HashMap<>());
+                entryTable.addCharacter(letter);
 
                 // Then put the keywords under each letter
-                keywordMap.forEach((keyword, nodeList) -> {
-                    fileMappings.get(letter).putIfAbsent(keyword, new ArrayList<>());
-                    nodeList.forEach(nodeId -> {
-                        logger.debug("Adding node-{} for keyword: {}", nodeId, keyword);
-                        if (!fileMappings.get(letter).get(keyword).contains(nodeId)) {
-                            fileMappings.get(letter).get(keyword).add(nodeId);
-                        }
+                keywordMap.forEach((keyword, entryTableEntries) -> {
+                    entryTableEntries.forEach(entryTableEntry -> {
+                        logger.debug("Adding entry-{} for keyword: {} to entry table", entryTableEntry, keyword);
+                        entryTable.addEntry(keyword, entryTableEntry);
                     });
                 });
             });
@@ -144,7 +154,7 @@ public class Node {
                 // Usually an entry should be present.
                 if (entry.isPresent()) {
                     logger.info("Offering keyword ({}-{}) to Node - {}", keyword, file, entry.get());
-                    communicationProvider.offerFile(entry.get().getAddress(), keyword, String.valueOf(this.nodeId), file);
+                    communicationProvider.offerFile(entry.get().getAddress(), keyword, this.nodeId, file);
                 } else {
                     // I should take over this file name
                     logger.info("I'm indexing ({}-{})", keyword, file);
@@ -177,8 +187,7 @@ public class Node {
     }
 
     /**
-     * Generates and Returns the list of files available in my node.
-     * 3 to 5 files in each node
+     * Generates and Returns the list of files available in my node. 3 to 5 files in each node
      *
      * @return List of files available in my node.
      */
@@ -194,7 +203,6 @@ public class Node {
         }
         return myFiles;
     }
-
 
 
     public void stop() {
@@ -214,7 +222,7 @@ public class Node {
 
                 this.routingTable.clear();
                 this.myFiles.clear();
-                this.fileMappings.clear();
+                this.entryTable.clear();
                 stateManager.setState(REGISTERED);
             }
 
