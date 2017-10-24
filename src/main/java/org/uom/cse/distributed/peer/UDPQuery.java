@@ -9,4 +9,6 @@ import org.uom.cse.distributed.peer.api.QueryInterface;
  * @author Keet Sugathadasa
  */
 public class UDPQuery implements QueryInterface {
+
+
 }

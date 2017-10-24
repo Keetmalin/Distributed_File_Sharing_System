@@ -6,4 +6,6 @@ package org.uom.cse.distributed.peer.api;
  * @author Keet Sugathadasa
  */
 public interface QueryInterface {
+
+
 }
