@@ -3,6 +3,7 @@
  */
 package org.uom.cse.distributed.peer.api;
 
+import org.uom.cse.distributed.peer.RoutingTable;
 import org.uom.cse.distributed.peer.RoutingTableEntry;
 
 import java.net.InetSocketAddress;
@@ -59,4 +60,14 @@ public abstract class CommunicationProvider {
      * @param file    file name to be sent
      */
     public abstract void offerFile(InetSocketAddress peer, String keyword, int node, String file);
+
+    /**
+     * This will search for a file name in the entire system and return the list of nodes {@link InetSocketAddress}
+     *
+     * @param targetNode {@link InetSocketAddress} the node that needs to be searched
+     * @param fileName the name of the file that needs to be searched
+     * @param keyword keyword to be send
+     * @return  Return a set of {@link InetSocketAddress}
+     */
+    public abstract Set<InetSocketAddress> searchFullFile(InetSocketAddress targetNode , String fileName, String keyword);
 }

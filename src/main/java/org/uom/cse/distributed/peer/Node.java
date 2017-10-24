@@ -51,6 +51,7 @@ public class Node {
     private final List<String> myFiles = new ArrayList<>();
 
     private final CommunicationProvider communicationProvider;
+    private final UDPQuery udpQuery = new UDPQuery();
     private final Server server;
     private final String username;
     private final String ipAddress;
@@ -85,6 +86,7 @@ public class Node {
 
         server.start(this);
         communicationProvider.start();
+        udpQuery.initialize(this);
 
         // 1. Register and fetch 2 random peers from Bootstrap Server
         logger.debug("Registering node");
@@ -158,7 +160,7 @@ public class Node {
         logger.debug("My routing table is -> {}", routingTable.getEntries());
 
         // 7. Send my files to corresponding nodes.
-        myFiles.addAll(getMyFiles());
+        myFiles.addAll(generateMyFiles());
         myFiles.forEach(file -> {
             String keywords[] = file.split(" ");
             Stream.of(keywords).forEach(keyword -> {
@@ -208,7 +210,7 @@ public class Node {
      *
      * @return List of files available in my node.
      */
-    private List<String> getMyFiles() {
+    private List<String> generateMyFiles() {
         if (myFiles.size() == 0) {
             //randomly decide the file count to be 3 to 5 files
             Random random = new Random();
@@ -223,6 +225,7 @@ public class Node {
 
 
     public void stop() {
+        // TODO: graceful departure
         logger.debug("Stopping node");
         if (stateManager.getState().compareTo(REGISTERED) >= 0) {
 
@@ -264,6 +267,10 @@ public class Node {
         return username;
     }
 
+    public List<String> getMyFiles() {
+        return myFiles;
+    }
+
     public String getIpAddress() {
         return ipAddress;
     }
@@ -278,6 +285,10 @@ public class Node {
 
     public State getState() {
         return stateManager.getState();
+    }
+
+    public CommunicationProvider getCommunicationProvider() {
+        return communicationProvider;
     }
 
     @Override
