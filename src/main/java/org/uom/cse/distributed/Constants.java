@@ -27,6 +27,8 @@ public class Constants {
     public static final String NEWNODE_MSG_FORMAT = "NEWNODE %s %d %d";
     /** NEWENTRY ${keyword} ${node} ${file} */
     public static final String NEWENTRY_MSG_FORMAT = "NEWENTRY %s %d %s";
+    /** QUERY ${keyword} ${filename} */
+    public static final String QUERY_MSG_FORMAT = "QUERY %s %s";
 
     /** Message format to be used when sending a request to the bootstrap server. ${length} ${msg} */
     public static final String MSG_FORMAT = "%04d %s";
@@ -36,6 +38,7 @@ public class Constants {
     /** Message commands to be used in client server communications **/
     public static final String GET_ROUTING_TABLE = "GETRTBL";
     public static final String JOIN = "BCAST";
+    public static final String QUERY = "QUERY";
     public static final String NEW_ENTRY = "NEWENTRY";
     public static final String HANDOVER = "HNDVR";
     public static final String NEW_NODE_ENTRY = "NEWNODE";

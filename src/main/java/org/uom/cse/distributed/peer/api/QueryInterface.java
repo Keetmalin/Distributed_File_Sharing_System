@@ -17,7 +17,7 @@ public interface QueryInterface {
      * @param fileName the file name that needs to be searched in the network
      * @return InetSocketAddress list of the nodes that contain the file
      */
-    public InetSocketAddress[] searchFullFile(String fileName);
+    public void searchFullFile(String fileName);
 
     /**
      * this method looks at the files in the the node itself and return the node file

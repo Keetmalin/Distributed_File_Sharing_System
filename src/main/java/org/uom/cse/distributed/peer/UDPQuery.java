@@ -9,6 +9,7 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Stream;
 
 /**
@@ -22,23 +23,24 @@ public class UDPQuery implements QueryInterface {
     private static final Logger logger = LoggerFactory.getLogger(Node.class);
 
     private Node node;
+    private Set<InetSocketAddress> inetSocketAddresses;
 
     public void initialize(Node node){
         this.node = node;
     }
 
     @Override
-    public InetSocketAddress[] searchFullFile(String fileName) {
+    public void searchFullFile(String fileName) {
 
         // 1) First look in the same node for the requested file name
         if (searchMyFilesFullName(fileName)){
             logger.info("file name {} is available in your node itself");
             //TODO check what to return if the file is self contained
-            InetSocketAddress[] inetSocketAddresses = new InetSocketAddress[1];
-            inetSocketAddresses[0] = new InetSocketAddress(this.node.getIpAddress(), this.node.getPort());
-            return inetSocketAddresses;
+
+            inetSocketAddresses.add(new InetSocketAddress(this.node.getIpAddress(), this.node.getPort()));
         }
         String keywords[] = fileName.split(" ");
+
         Stream.of(keywords).forEach(keyword -> {
 
             int nodeId = HashUtils.keywordToNodeId(keyword);
@@ -47,7 +49,7 @@ public class UDPQuery implements QueryInterface {
             // the entry should be a different node (not itself)
             if (entry.isPresent()) {
                 logger.debug("searching for the node in Node {}" , entry.get().getNodeName());
-//                this.node.getCommunicationProvider()
+                inetSocketAddresses = this.node.getCommunicationProvider().searchFullFile(entry.get().getAddress() , fileName, keyword);
 
 
             } else {
@@ -55,7 +57,6 @@ public class UDPQuery implements QueryInterface {
             }
         });
 
-        return new InetSocketAddress[0];
     }
 
     @Override

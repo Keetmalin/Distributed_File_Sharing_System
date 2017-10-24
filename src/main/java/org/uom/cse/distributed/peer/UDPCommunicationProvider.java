@@ -21,11 +21,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import static org.uom.cse.distributed.Constants.GET_ROUTING_TABLE;
-import static org.uom.cse.distributed.Constants.NEWENTRY_MSG_FORMAT;
-import static org.uom.cse.distributed.Constants.NEWNODE_MSG_FORMAT;
-import static org.uom.cse.distributed.Constants.RETRIES_COUNT;
-import static org.uom.cse.distributed.Constants.RETRY_TIMEOUT_MS;
+import static org.uom.cse.distributed.Constants.*;
 
 /**
  * Provides UDP Socket Based communication with Peers
@@ -92,8 +88,26 @@ public class UDPCommunicationProvider extends CommunicationProvider {
     }
 
     @Override
-    public InetSocketAddress[] searchFullFile(String fileName) {
-        return new InetSocketAddress[0];
+    public Set<InetSocketAddress> searchFullFile(InetSocketAddress targetNode, String fileName, String keyword) {
+        String request = String.format(QUERY_MSG_FORMAT, keyword, fileName);
+        logger.debug("Searching filename: {} , with keyword: {} in the network" , fileName, keyword);
+        String response = retryOrTimeout(request, targetNode);
+        logger.debug("Received response: {}", response);
+
+        if (response != null) {
+            byte[] received = Base64.getDecoder().decode(response);
+            ByteArrayInputStream bais = new ByteArrayInputStream(received);
+            try (ObjectInputStream in = new ObjectInputStream(bais)) {
+                Object obj = in.readObject();
+                logger.debug("Received the Set of addresses that contains the file {}. {} - {}", fileName, obj.getClass(), obj);
+                return (HashSet<InetSocketAddress>) obj;
+            } catch (Exception e) {
+                logger.error("Error occurred when obtaining routing table", e);
+            }
+        }
+
+        // If failed we return an empty set to not to break operations.
+        return new HashSet<>();
     }
 
     /**

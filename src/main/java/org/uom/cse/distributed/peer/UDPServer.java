@@ -10,14 +10,13 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import static org.uom.cse.distributed.Constants.GET_ROUTING_TABLE;
-import static org.uom.cse.distributed.Constants.JOIN;
-import static org.uom.cse.distributed.Constants.NEW_ENTRY;
-import static org.uom.cse.distributed.Constants.RESPONSE_OK;
-import static org.uom.cse.distributed.Constants.RETRIES_COUNT;
+import static org.uom.cse.distributed.Constants.*;
 
 /**
  * This class implements the server side listening and handling of requests Via UDP - for each node in the Distributed
@@ -102,7 +101,11 @@ public class UDPServer implements Server {
             String[] tempList = incomingResult[2].split(" ", 3);
             logger.debug("Adding entry to entry table: {}", tempList);
             this.node.getEntryTable().addEntry(tempList[0], new EntryTableEntry(tempList[1], tempList[2]));
-        } else if (JOIN.equals(command)) {
+        } else if (QUERY.equals(command)) {
+            String[] tempList = incomingResult[2].split(" ");
+            InetSocketAddress[] inetSocketAddresses = getNodeList(searchEntryTable(tempList[0], tempList[1]));
+            provideAddressArray(incoming, inetSocketAddresses);
+        }else if (JOIN.equals(command)) {
             //String ipAddress = st.nextToken();
             //int port = Integer.parseInt(st.nextToken());
             //                    handleBroadcastRequest(nodeName, incoming, ipAddress, port);
@@ -152,10 +155,59 @@ public class UDPServer implements Server {
 
     }
 
+    @Override
     public void stop() {
         if (started) {
             started = false;
             executorService.shutdownNow();
         }
     }
+
+    private void provideAddressArray(DatagramPacket datagramPacket, InetSocketAddress[] inetSocketAddresses){
+        int retriesLeft = numOfRetries;
+        while (retriesLeft > 0) {
+            try (DatagramSocket datagramSocket = new DatagramSocket()) {
+                RequestUtils.sendObjectRequest(datagramSocket, inetSocketAddresses,
+                        datagramPacket.getAddress(), datagramPacket.getPort());
+                logger.debug("Array of node addresses provided to the recipient: {}", datagramPacket.getAddress(), datagramPacket.getPort());
+                break;
+            } catch (IOException e) {
+                logger.error("Error occurred when sending the response", e);
+                retriesLeft--;
+            }
+        }
+    }
+
+    private List<String> searchEntryTable(String keyword, String fileName){
+
+        char c = keyword.charAt(0);
+        List<EntryTableEntry> entryList= this.node.getEntryTable().getEntries().get(c).get(keyword);
+        List<String> results = new ArrayList<String>();
+
+        for (EntryTableEntry entry: entryList){
+
+            if (fileName.equals(entry.getFileName())){
+                results.add(entry.getNodeName());
+            }
+
+        }
+        return results;
+    }
+
+    private InetSocketAddress[] getNodeList(List<String> nodeNameList){
+
+        Set<RoutingTableEntry> entries = this.node.getRoutingTable().getEntries();
+        InetSocketAddress[] inetSocketAddresses = new InetSocketAddress[nodeNameList.size()];
+        int i = 0;
+
+        for (RoutingTableEntry routingTableEntry: entries){
+            if (nodeNameList.contains(routingTableEntry.getNodeName())){
+                inetSocketAddresses[i] = routingTableEntry.getAddress();
+                i++;
+            }
+        }
+        return inetSocketAddresses;
+    }
+
+
 }
