@@ -12,7 +12,7 @@ public class Constants {
     public static final String BOOTSTRAP_IP = "127.0.0.1";
 
     /** How many times a given UDP request be retried */
-    public static final int RETRIES_COUNT = 3;
+    public static final int RETRIES_COUNT = 10;
     public static final int RETRY_TIMEOUT_MS = 5000;
     public static final int GRACE_PERIOD_MS = 5000;
 

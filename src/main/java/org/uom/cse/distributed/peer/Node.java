@@ -105,24 +105,19 @@ public class Node implements RoutingTableListener {
             }
         }
 
-        //        try {
-        //            logger.debug("Waiting for random time period before configuring");
-        //            Thread.sleep(new Random().nextInt(20000));
-        //        } catch (InterruptedException ignored) { }
-
         // 1. Select a Node Name
         this.nodeId = selectNodeName();
         logger.info("Selected node ID -> {}", this.nodeId);
 
         // 2. Add my node to my routing table
         routingTable.addEntry(new RoutingTableEntry(new InetSocketAddress(ipAddress, port), String.valueOf(this.nodeId)));
-        logger.debug("My routing table is -> {}", routingTable.getEntries());
+        logger.info("My routing table is -> {}", routingTable.getEntries());
 
         // 3. Select my character
         myChar = HashUtils.nodeIdToChar(this.nodeId);
         logger.info("My char is -> {}", myChar);
 
-        refresh();
+        configure();
 
         // TODO: 10/24/17 Periodic synchronization
         /*
@@ -133,7 +128,7 @@ public class Node implements RoutingTableListener {
         stateManager.setState(CONFIGURED);
     }
 
-    private void refresh() {
+    private void configure() {
         // Calculate my characters
         Optional<RoutingTableEntry> myPredecessor = routingTable.findPredecessorOf(this.nodeId);
         logger.debug("My predecessor is -> {}", myPredecessor);
@@ -189,7 +184,6 @@ public class Node implements RoutingTableListener {
                     if (!communicationProvider.offerFile(entry.get().getAddress(), keyword, this.nodeId, file)) {
                         logger.warn("Unable to offer file ({} -> {}) to node -> {}. Keeping with me",
                                 keyword, file, entry.get());
-                        entryTable.addCharacter(keyword.charAt(0));
                         entryTable.addEntry(keyword, new EntryTableEntry(String.valueOf(this.nodeId), file));
                     }
                 } else {
@@ -199,7 +193,6 @@ public class Node implements RoutingTableListener {
                 }
             });
         });
-
     }
 
     /**
@@ -303,11 +296,13 @@ public class Node implements RoutingTableListener {
      * @param node IP and port of the node to be removed
      */
     public void removeNode(InetSocketAddress node) {
+        stateManager.checkState(CONNECTED, IDLE, CONFIGURED);
         logger.warn("Attempting to remove routing table entry -> {} from routing table", node);
         this.routingTable.removeEntry(node);
     }
 
     public void addNewNode(String ipAddress, int newNodePort, int newNodeId) {
+        stateManager.checkState(State.CONFIGURED);
         InetSocketAddress inetSocketAddress = new InetSocketAddress(ipAddress, newNodePort);
         RoutingTableEntry routingTableEntry = new RoutingTableEntry(inetSocketAddress, String.valueOf(newNodeId));
         routingTable.addEntry(routingTableEntry);
@@ -322,7 +317,9 @@ public class Node implements RoutingTableListener {
      * @return entries to be handed over
      */
     public Map<Character, Map<String, List<EntryTableEntry>>> getEntriesToHandoverTo(int nodeId) {
-        // 1. Find the predecessor of the node given
+        stateManager.checkState(State.CONFIGURED);
+
+        // Find the predecessor of the node given
         Optional<RoutingTableEntry> entryOptional = routingTable.findPredecessorOf(nodeId);
         if (!entryOptional.isPresent()) {
             logger.warn("No predecessor found for node -> {}", nodeId);
@@ -350,6 +347,7 @@ public class Node implements RoutingTableListener {
 
 
     public void removeEntries(Set<Character> characters) {
+        stateManager.checkState(State.CONFIGURED);
         characters.forEach(entryTable::removeCharacter);
     }
 
@@ -432,11 +430,11 @@ public class Node implements RoutingTableListener {
 
     @Override
     public void entryAdded(RoutingTableEntry entry) {
-        //        executorService.submit(this::refresh);
+        //        executorService.submit(this::configure);
     }
 
     @Override
     public void entryRemoved(RoutingTableEntry entry) {
-        //        executorService.submit(this::refresh);
+        //        executorService.submit(this::configure);
     }
 }

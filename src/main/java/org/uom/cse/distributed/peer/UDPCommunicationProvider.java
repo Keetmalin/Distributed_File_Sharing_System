@@ -26,6 +26,7 @@ import static org.uom.cse.distributed.Constants.GET_ROUTING_TABLE;
 import static org.uom.cse.distributed.Constants.NEWENTRY_MSG_FORMAT;
 import static org.uom.cse.distributed.Constants.NEWNODE_MSG_FORMAT;
 import static org.uom.cse.distributed.Constants.QUERY_MSG_FORMAT;
+import static org.uom.cse.distributed.Constants.RESPONSE_FAILURE;
 import static org.uom.cse.distributed.Constants.RETRIES_COUNT;
 import static org.uom.cse.distributed.Constants.RETRY_TIMEOUT_MS;
 
@@ -143,9 +144,12 @@ public class UDPCommunicationProvider extends CommunicationProvider {
             });
 
             try {
-                return task.get(RETRY_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+                String response = task.get(RETRY_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+                if (!response.contains(RESPONSE_FAILURE)) {
+                    return response;
+                }
             } catch (Exception e) {
-                logger.error("Error occurred when completing request({}) to peer- {}. Error: {}", request, peer, e);
+                logger.error("Error occurred when completing request({}) to peer -> {}. Error: {}", request, peer, e);
                 task.cancel(true);
                 retriesLeft--;
             }

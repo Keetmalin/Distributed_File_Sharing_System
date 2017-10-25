@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.uom.cse.distributed.peer.api.EntryTableEntry;
 import org.uom.cse.distributed.peer.api.RoutingTableEntry;
 import org.uom.cse.distributed.peer.api.Server;
+import org.uom.cse.distributed.peer.api.State;
 import org.uom.cse.distributed.peer.utils.RequestUtils;
 
 import java.io.IOException;
@@ -103,7 +104,20 @@ public class UDPServer implements Server {
         }
     }
 
+    /**
+     * Handles requests coming to this node.
+     *
+     * @param request  Request received
+     * @param incoming incoming datagram packet
+     * @throws IOException
+     */
     private void handleRequest(String request, DatagramPacket incoming) throws IOException {
+        // Here, we are purposefully preventing sending a response if I'm not configured yet
+        if (node.getState().compareTo(State.CONFIGURED) < 0) {
+            logger.warn("Not responding to request '{}' because I'm at state -> {}", request, node.getState());
+            return;
+        }
+
         String[] incomingResult = request.split(" ", 3);
         logger.debug("Request length -> {}", incomingResult[0]);
         String command = incomingResult[1];

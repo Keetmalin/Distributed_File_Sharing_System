@@ -41,7 +41,8 @@ public class EntryTable {
         char c = keyword.toUpperCase().charAt(0);
 
         if (!entries.containsKey(c)) {
-            throw new IllegalArgumentException("Character " + c + " is not in my entries");
+            logger.warn("[{}] not in my characters. But adding for consistency", c);
+            addCharacter(c);
         }
 
         logger.debug("Adding entry -> {}", entry);
