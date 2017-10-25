@@ -31,9 +31,9 @@ public class UDPQuery implements QueryInterface {
     public void searchFullFile(String fileName) {
         // 1. First look in the same node for the requested file name
         if (searchMyFilesFullName(fileName)) {
-            logger.info("file name {} is available in your node itself");
-            //TODO check what to return if the file is self contained
+            logger.info("file name {} is available in your node itself", fileName);
             inetSocketAddresses.add(new InetSocketAddress(this.node.getIpAddress(), this.node.getPort()));
+            return;
         }
 
         String keywords[] = fileName.split(" ");
@@ -43,13 +43,15 @@ public class UDPQuery implements QueryInterface {
             Optional<RoutingTableEntry> entry = this.node.getRoutingTable().findNodeOrSuccessor(nodeId);
 
             // the entry should be a different node (not itself)
-            if (entry.isPresent()) {
+            if (entry.isPresent() && Integer.parseInt(entry.get().getNodeName()) != node.getNodeId()) {
                 logger.debug("searching for the node in Node {}", entry.get().getNodeName());
                 inetSocketAddresses = this.node.getCommunicationProvider().searchFullFile(entry.get().getAddress(), fileName, keyword);
             } else {
                 logger.debug("Entry is not present");
             }
         });
+
+        logger.info("Search results -> {}", inetSocketAddresses);
     }
 
     @Override

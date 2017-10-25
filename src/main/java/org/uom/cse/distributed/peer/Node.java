@@ -229,12 +229,17 @@ public class Node implements RoutingTableListener {
     private Set<RoutingTableEntry> connect(List<InetSocketAddress> peers) {
         logger.debug("Collecting routing table from peers: {}", peers);
         Set<RoutingTableEntry> entries = new HashSet<>();
-        peers.forEach(peer -> {
+        for (InetSocketAddress peer : peers) {
             Set<RoutingTableEntry> received = communicationProvider.connect(peer);
-            logger.debug("Received routing table: {} from {}", received, peer);
-            entries.addAll(received);
-        });
+            logger.debug("Received routing table: {} from -> {}", received, peer);
+            if (received.size() == 0) {
+                logger.error("Failed to obtain routing table from -> {}", peer);
+                entries.clear();
+                break;
+            }
 
+            entries.addAll(received);
+        }
         return entries;
     }
 
@@ -426,6 +431,10 @@ public class Node implements RoutingTableListener {
 
     public char getMyChar() {
         return myChar;
+    }
+
+    public UDPQuery getUdpQuery() {
+        return udpQuery;
     }
 
     @Override

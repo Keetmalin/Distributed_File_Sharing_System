@@ -1,5 +1,7 @@
 package org.uom.cse.distributed.server;
 
+import org.uom.cse.distributed.Constants;
+
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -13,9 +15,8 @@ import java.util.concurrent.Executors;
 
 /**
  * A class to manage the Bootstrap Server Implementation
- *
- * Taken from CS4262 course CSE
- * Provided by Dilum Bandara and Anura P. Jayasumana
+ * <p>
+ * Taken from CS4262 course CSE Provided by Dilum Bandara and Anura P. Jayasumana
  */
 public class BootstrapServer {
 
@@ -177,5 +178,18 @@ public class BootstrapServer {
 
     public boolean isStarted() {
         return started;
+    }
+
+    public static void main(String[] args) {
+        BootstrapServer server = new BootstrapServer(Constants.BOOTSTRAP_PORT);
+        server.start();
+
+        while (server.isStarted()) {
+            try {
+                Thread.sleep(2000);
+            } catch (InterruptedException ignored) { }
+        }
+
+        server.stop();
     }
 }

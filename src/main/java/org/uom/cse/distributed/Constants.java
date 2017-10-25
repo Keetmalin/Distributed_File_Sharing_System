@@ -8,8 +8,8 @@ public class Constants {
     private Constants() { }
 
     /** Need to set the bootstrap IP and Port here */
-    public static final int BOOTSTRAP_PORT = 55555;
-    public static final String BOOTSTRAP_IP = "127.0.0.1";
+    public static int BOOTSTRAP_PORT = 55555;
+    public static String BOOTSTRAP_IP = "127.0.0.1";
 
     /** How many times a given UDP request be retried */
     public static final int RETRIES_COUNT = 10;
