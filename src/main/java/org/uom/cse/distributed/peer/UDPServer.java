@@ -4,7 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.uom.cse.distributed.peer.api.EntryTableEntry;
 import org.uom.cse.distributed.peer.api.RoutingTableEntry;
-import org.uom.cse.distributed.peer.api.Server;
+import org.uom.cse.distributed.peer.api.NodeServer;
 import org.uom.cse.distributed.peer.api.State;
 import org.uom.cse.distributed.peer.utils.RequestUtils;
 
@@ -37,7 +37,7 @@ import static org.uom.cse.distributed.Constants.RETRY_TIMEOUT_MS;
  * @author Keet Sugathadasa
  * @author Imesha Sudasingha
  */
-public class UDPServer implements Server {
+public class UDPServer implements NodeServer {
 
     private static final Logger logger = LoggerFactory.getLogger(Node.class);
 
@@ -45,7 +45,6 @@ public class UDPServer implements Server {
     private ExecutorService executorService;
     private boolean started = false;
     private final int port;
-
     private Node node;
 
     public UDPServer(int port) {
@@ -60,7 +59,6 @@ public class UDPServer implements Server {
         }
 
         this.node = node;
-
         executorService = Executors.newCachedThreadPool();
         executorService.submit(() -> {
             try {
@@ -145,8 +143,7 @@ public class UDPServer implements Server {
         }
     }
 
-    @Override
-    public void provideRoutingTable(InetSocketAddress recipient) throws IOException {
+    private void provideRoutingTable(InetSocketAddress recipient) throws IOException {
         logger.debug("Returning routing table to -> {}", recipient);
         String response;
         try {
@@ -159,8 +156,7 @@ public class UDPServer implements Server {
         logger.debug("Routing table entries provided to the recipient: {}", recipient);
     }
 
-    @Override
-    public void handleNewNodeRequest(String request, InetSocketAddress recipient) throws IOException {
+    private void handleNewNodeRequest(String request, InetSocketAddress recipient) throws IOException {
         String[] parts = request.split(" ");
         String ipAddress = parts[0];
         int port = Integer.parseInt(parts[1]);
@@ -221,7 +217,6 @@ public class UDPServer implements Server {
                 retriesLeft--;
             }
         }
-
         logger.error("RESPONSE FAILED !!! ({} -> {})", response, peer);
         return false;
     }
@@ -247,11 +242,9 @@ public class UDPServer implements Server {
         List<String> results = new ArrayList<String>();
 
         for (EntryTableEntry entry : entryList) {
-
             if (fileName.equals(entry.getFileName())) {
                 results.add(entry.getNodeName());
             }
-
         }
         return results;
     }

@@ -42,7 +42,7 @@ public class Node implements RoutingTableListener {
     private final UDPQuery udpQuery = new UDPQuery();
 
     private final CommunicationProvider communicationProvider;
-    private final Server server;
+    private final NodeServer server;
     private final String username;
     private final String ipAddress;
     private final int port;
@@ -56,15 +56,15 @@ public class Node implements RoutingTableListener {
         this(port, new UDPCommunicationProvider(), new UDPServer(port));
     }
 
-    public Node(int port, CommunicationProvider communicationProvider, Server server) {
+    public Node(int port, CommunicationProvider communicationProvider, NodeServer server) {
         this(port, "localhost", communicationProvider, server);
     }
 
-    public Node(int port, String ipAddress, CommunicationProvider communicationProvider, Server server) {
+    public Node(int port, String ipAddress, CommunicationProvider communicationProvider, NodeServer server) {
         this(port, ipAddress, UUID.randomUUID().toString(), communicationProvider, server);
     }
 
-    public Node(int port, String ipAddress, String username, CommunicationProvider communicationProvider, Server server) {
+    public Node(int port, String ipAddress, String username, CommunicationProvider communicationProvider, NodeServer server) {
         this.port = port;
         this.ipAddress = ipAddress;
         this.username = username;

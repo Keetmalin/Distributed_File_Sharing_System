@@ -95,6 +95,7 @@ public class EntryTable {
      * @return keywords under that character
      */
     public synchronized Map<String, List<EntryTableEntry>> getKeywordsFor(char c) {
+        c = Character.toUpperCase(c);
         return entries.get(c);
     }
 
@@ -105,5 +106,9 @@ public class EntryTable {
 
     public synchronized Map<Character, Map<String, List<EntryTableEntry>>> getEntries() {
         return entries;
+    }
+
+    public synchronized List<EntryTableEntry> getEntriesByKyeword(String key) {
+        return getKeywordsFor(key.charAt(0)).get(key);
     }
 }

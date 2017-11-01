@@ -12,7 +12,7 @@ import java.net.InetSocketAddress;
  * @author Keet Sugathadasa
  */
 
-public interface Server {
+public interface NodeServer {
 
     /**
      * this starts a server on the node that is capable of listening to incoming requests
@@ -36,13 +36,13 @@ public interface Server {
      *
      * @param recipient The client who sent the incoming packet
      */
-    void provideRoutingTable(InetSocketAddress recipient) throws IOException;
-
-    /**
-     * this gets the current nodes routing table and pass it down to whoever is requesting is
-     *
-     * @param request   Request received
-     * @param recipient The client who is sending the request
-     */
-    void handleNewNodeRequest(String request, InetSocketAddress recipient) throws IOException;
+//    void provideRoutingTable(InetSocketAddress recipient) throws IOException;
+//
+//    /**
+//     * this gets the current nodes routing table and pass it down to whoever is requesting is
+//     *
+//     * @param request   Request received
+//     * @param recipient The client who is sending the request
+//     */
+//    void handleNewNodeRequest(String request, InetSocketAddress recipient) throws IOException;
 }
