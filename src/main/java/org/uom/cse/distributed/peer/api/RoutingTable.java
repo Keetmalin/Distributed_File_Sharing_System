@@ -48,13 +48,13 @@ public class RoutingTable {
             logger.debug("Adding entry: {} to the routing table", entry);
             this.entries.add(entry);
             notifyListeners(entry, true);
-        } else if (duplicates.stream().filter(e -> e.getNodeName().equals(entry.getNodeName())).count() == 1) {
+        } else if (duplicates.stream().filter(e -> e.getNodeId() == entry.getNodeId()).count() == 1) {
             logger.warn("Entry : {} already exists", entry);
         } else {
             // We have an erroneous entry. Correct it.
             RoutingTableEntry e = duplicates.get(0);
             logger.warn("Correcting entry {} to {}", e, entry);
-            e.setNodeName(entry.getNodeName());
+            e.setNodeId(entry.getNodeId());
             notifyListeners(entry, true);
         }
     }
@@ -93,14 +93,14 @@ public class RoutingTable {
     }
 
     /**
-     * Finds the {@link InetSocketAddress} of a given node. Searched by the {@link RoutingTableEntry#nodeName}
+     * Finds the {@link InetSocketAddress} of a given node. Searched by the {@link RoutingTableEntry#nodeId}
      *
-     * @param nodeName Name of the node of which IP-port info is required to be found
+     * @param nodeId ID of the node of which IP-port info is required to be found
      * @return Optional of {@link InetSocketAddress}
      */
-    public Optional<RoutingTableEntry> findByNodeName(String nodeName) {
+    public Optional<RoutingTableEntry> findByNodeId(int nodeId) {
         return this.entries.stream()
-                .filter(e -> e.getNodeName().equals(nodeName))
+                .filter(e -> e.getNodeId() == nodeId)
                 .findFirst();
     }
 
@@ -113,11 +113,11 @@ public class RoutingTable {
      */
     public Optional<RoutingTableEntry> findNodeOrSuccessor(int nodeId) {
         List<RoutingTableEntry> sortedEntries = this.entries.stream()
-                .sorted(Comparator.comparingInt(e -> Integer.parseInt(e.getNodeName())))
+                .sorted(Comparator.comparingInt(RoutingTableEntry::getNodeId))
                 .collect(Collectors.toList());
 
         Optional<RoutingTableEntry> successor = sortedEntries.stream()
-                .filter(e -> Integer.parseInt(e.getNodeName()) >= nodeId)
+                .filter(e -> e.getNodeId() >= nodeId)
                 .findFirst();
 
         if (successor.isPresent()) {
@@ -137,16 +137,16 @@ public class RoutingTable {
      */
     public Optional<RoutingTableEntry> findSuccessorOf(int nodeId) {
         List<RoutingTableEntry> sortedEntries = this.entries.stream()
-                .sorted(Comparator.comparingInt(e -> Integer.parseInt(e.getNodeName())))
+                .sorted(Comparator.comparingInt(RoutingTableEntry::getNodeId))
                 .collect(Collectors.toList());
 
         Optional<RoutingTableEntry> successor = sortedEntries.stream()
-                .filter(e -> Integer.parseInt(e.getNodeName()) > nodeId)
+                .filter(e -> e.getNodeId() > nodeId)
                 .findFirst();
 
-        if (successor.isPresent() && Integer.parseInt(successor.get().getNodeName()) != nodeId) {
+        if (successor.isPresent() && successor.get().getNodeId() != nodeId) {
             return successor;
-        } else if (sortedEntries.size() > 0 && Integer.parseInt(sortedEntries.get(0).getNodeName()) != nodeId) {
+        } else if (sortedEntries.size() > 0 && sortedEntries.get(0).getNodeId() != nodeId) {
             return Optional.of(sortedEntries.get(0));
         }
 
@@ -161,16 +161,16 @@ public class RoutingTable {
      */
     public Optional<RoutingTableEntry> findPredecessorOf(int nodeId) {
         List<RoutingTableEntry> sortedEntries = this.entries.stream()
-                .sorted(Comparator.comparingInt(e -> Integer.parseInt(((RoutingTableEntry) e).getNodeName())).reversed())
+                .sorted(Comparator.comparingInt(e -> ((RoutingTableEntry) e).getNodeId()).reversed())
                 .collect(Collectors.toList());
 
         Optional<RoutingTableEntry> predecessor = sortedEntries.stream()
-                .filter(e -> Integer.parseInt(e.getNodeName()) < nodeId)
+                .filter(e -> e.getNodeId() < nodeId)
                 .findFirst();
 
-        if (predecessor.isPresent() && Integer.parseInt(predecessor.get().getNodeName()) != nodeId) {
+        if (predecessor.isPresent() && predecessor.get().getNodeId() != nodeId) {
             return predecessor;
-        } else if (sortedEntries.size() > 0 && Integer.parseInt(sortedEntries.get(0).getNodeName()) != nodeId) {
+        } else if (sortedEntries.size() > 0 && sortedEntries.get(0).getNodeId() != nodeId) {
             return Optional.of(sortedEntries.get(0));
         }
 

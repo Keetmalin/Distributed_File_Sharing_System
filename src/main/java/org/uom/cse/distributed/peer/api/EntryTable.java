@@ -23,7 +23,7 @@ import java.util.Map;
  */
 public class EntryTable {
 
-    private static final Logger logger = LoggerFactory.getLogger(RoutingTable.class);
+    private static final Logger logger = LoggerFactory.getLogger(EntryTable.class);
 
     private final Map<Character, Map<String, List<EntryTableEntry>>> entries = new HashMap<>();
 
@@ -86,6 +86,14 @@ public class EntryTable {
         }
 
         return false;
+    }
+
+    public synchronized void addAll(Map<Character, Map<String, List<EntryTableEntry>>> table) {
+        if (table == null) return;
+
+        table.forEach((character, keywordMap) -> keywordMap.forEach((keyword, entries) -> {
+            entries.forEach(entry -> this.addEntry(keyword, entry));
+        }));
     }
 
     /**

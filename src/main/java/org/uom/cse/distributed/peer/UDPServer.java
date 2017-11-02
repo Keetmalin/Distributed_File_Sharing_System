@@ -3,8 +3,8 @@ package org.uom.cse.distributed.peer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.uom.cse.distributed.peer.api.EntryTableEntry;
-import org.uom.cse.distributed.peer.api.RoutingTableEntry;
 import org.uom.cse.distributed.peer.api.NodeServer;
+import org.uom.cse.distributed.peer.api.RoutingTableEntry;
 import org.uom.cse.distributed.peer.api.State;
 import org.uom.cse.distributed.peer.utils.RequestUtils;
 
@@ -15,20 +15,14 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import static org.uom.cse.distributed.Constants.GET_ROUTING_TABLE;
-import static org.uom.cse.distributed.Constants.NEW_ENTRY;
-import static org.uom.cse.distributed.Constants.NEW_NODE;
-import static org.uom.cse.distributed.Constants.QUERY;
-import static org.uom.cse.distributed.Constants.RESPONSE_FAILURE;
-import static org.uom.cse.distributed.Constants.RESPONSE_OK;
-import static org.uom.cse.distributed.Constants.RETRIES_COUNT;
-import static org.uom.cse.distributed.Constants.RETRY_TIMEOUT_MS;
+import static org.uom.cse.distributed.Constants.*;
 
 /**
  * This class implements the server side listening and handling of requests Via UDP - for each node in the Distributed
@@ -110,12 +104,6 @@ public class UDPServer implements NodeServer {
      * @throws IOException
      */
     private void handleRequest(String request, DatagramPacket incoming) throws IOException {
-        // Here, we are purposefully preventing sending a response if I'm not configured yet
-        if (node.getState().compareTo(State.CONFIGURED) < 0) {
-            logger.warn("Not responding to request '{}' because I'm at state -> {}", request, node.getState());
-            return;
-        }
-
         String[] incomingResult = request.split(" ", 3);
         logger.debug("Request length -> {}", incomingResult[0]);
         String command = incomingResult[1];
@@ -124,6 +112,11 @@ public class UDPServer implements NodeServer {
         InetSocketAddress recipient = new InetSocketAddress(incoming.getAddress(), incoming.getPort());
         switch (command) {
             case GET_ROUTING_TABLE:
+                // Here, we are purposefully preventing sending a response if I'm not configured yet
+                if (node.getState().compareTo(State.CONNECTED) < 0) {
+                    logger.warn("Not responding to request '{}' because I'm at state -> {}", request, node.getState());
+                    return;
+                }
                 provideRoutingTable(recipient);
                 break;
             case NEW_NODE:
@@ -140,6 +133,12 @@ public class UDPServer implements NodeServer {
                 InetSocketAddress[] inetSocketAddresses = getNodeList(searchEntryTable(parts[0], parts[1]));
                 provideAddressArray(recipient, inetSocketAddresses);
                 break;
+            case PING:
+                respondToPing(incomingResult[2], recipient);
+                break;
+            case SYNC:
+                handleSyncRequest(incomingResult[2], recipient);
+                break;
         }
     }
 
@@ -147,13 +146,56 @@ public class UDPServer implements NodeServer {
         logger.debug("Returning routing table to -> {}", recipient);
         String response;
         try {
-            response = RequestUtils.buildObjectRequest(this.node.getRoutingTable().getEntries());
+            String msg = String.format(SYNC_MSG_FORMAT, TYPE_ROUTING,
+                    RequestUtils.buildObjectRequest(this.node.getRoutingTable().getEntries()));
+            response = RequestUtils.buildRequest(msg);
         } catch (IOException e) {
             logger.error("Error occurred when building object request: {}", e);
             throw e;
         }
+
         retryOrTimeout(response, recipient);
         logger.debug("Routing table entries provided to the recipient: {}", recipient);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void respondToPing(String request, InetSocketAddress recipient) throws IOException {
+        logger.debug("Responding to ping with my table entries to -> {}", request);
+        String[] parts = request.split(" ");
+
+        Map<Character, Map<String, List<EntryTableEntry>>> toBeTakenOver;
+        Object obj = RequestUtils.base64StringToObject(parts[1]);
+        logger.info("Received characters to be taken over -> {}", obj);
+        if (obj != null) {
+            toBeTakenOver = (Map<Character, Map<String, List<EntryTableEntry>>>) obj;
+            this.node.takeOverEntries(toBeTakenOver);
+        }
+
+        int nodeId = Integer.parseInt(parts[0]);
+
+        String response;
+        try {
+            response = RequestUtils.buildObjectRequest(node.getEntryTable().getEntries());
+        } catch (IOException e) {
+            logger.error("Error occurred when building object request: {}", e);
+            throw e;
+        }
+
+        // 1. Send my entries to this node
+        if (!retryOrTimeout(response, recipient)) {
+            logger.error("Unable to respond to Ping request -> {}", recipient);
+        }
+
+        // TODO: 11/2/17 Add the calling node to my routing table if not present
+
+        // 2. Also send any characters to be taken over to this one as well. If present
+        Optional<RoutingTableEntry> tableEntryOptional = this.node.getRoutingTable().findByNodeId(nodeId);
+        if (tableEntryOptional.isPresent()) {
+            handoverEntries(nodeId, tableEntryOptional.get().getAddress());
+
+            // 3. Send my routing table to that node as well
+            provideRoutingTable(tableEntryOptional.get().getAddress());
+        }
     }
 
     private void handleNewNodeRequest(String request, InetSocketAddress recipient) throws IOException {
@@ -163,31 +205,64 @@ public class UDPServer implements NodeServer {
         int newNodeId = Integer.parseInt(parts[2]);
 
         this.node.addNewNode(ipAddress, port, newNodeId);
-        Map<Character, Map<String, List<EntryTableEntry>>> entriesToHandover = this.node.getEntriesToHandoverTo(newNodeId);
+
+        if (handoverEntries(newNodeId, recipient)) {
+            logger.info("Handed over entries to -> {}", newNodeId);
+        } else {
+            logger.warn("Unable to hand over entries to -> {}", newNodeId);
+            retryOrTimeout(RESPONSE_FAILURE, recipient);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void handleSyncRequest(String request, InetSocketAddress recipient) {
+        logger.debug("Received sync request -> {}", request);
+        String[] parts = request.split(" ");
+
+        Object obj = RequestUtils.base64StringToObject(parts[1]);
+        switch (parts[0]) {
+            case TYPE_ENTRIES:
+                logger.debug("Received characters to be taken over -> {}", obj);
+                if (obj != null) {
+                    Map<Character, Map<String, List<EntryTableEntry>>> toBeTakenOver =
+                            (Map<Character, Map<String, List<EntryTableEntry>>>) obj;
+                    this.node.takeOverEntries(toBeTakenOver);
+                }
+                break;
+            case TYPE_ROUTING:
+                logger.debug("Received routing table -> {}", obj);
+                break;
+        }
+
+        retryOrTimeout(RESPONSE_OK, recipient);
+    }
+
+    private boolean handoverEntries(int nodeId, InetSocketAddress recipient) throws IOException {
+        Map<Character, Map<String, List<EntryTableEntry>>> entriesToHandover = this.node.getEntriesToHandoverTo(nodeId);
 
         if (entriesToHandover == null) {
-            logger.error("Couldn't find characters to be handed over to node -> {}", newNodeId);
-            retryOrTimeout(RESPONSE_FAILURE, recipient);
-            return;
+            logger.warn("Couldn't find characters to be handed over to node -> {}", nodeId);
+            return false;
         }
 
         // Send the entries to new node. Only if that's successful, we remove them from myself
-        logger.debug("Notifying characters belonging to node -> {} : {}", newNodeId, entriesToHandover.keySet());
+        logger.debug("Notifying characters belonging to node -> {} : {}", nodeId, entriesToHandover.keySet());
         String response;
         try {
-            response = RequestUtils.buildObjectRequest(entriesToHandover);
+            String msg = String.format(SYNC_MSG_FORMAT, TYPE_ENTRIES, RequestUtils.buildObjectRequest(entriesToHandover));
+            response = RequestUtils.buildRequest(msg);
         } catch (IOException e) {
             logger.error("Error occurred when building object request: {}", e);
             throw e;
         }
 
         if (retryOrTimeout(response, recipient)) {
-            logger.debug("Successfully notified characters ({}) to node -> {}", entriesToHandover.keySet(), newNodeId);
+            logger.debug("Successfully notified characters ({}) to node -> {}", entriesToHandover.keySet(), nodeId);
             node.removeEntries(entriesToHandover.keySet());
-        } else {
-            logger.error("Unable to notify entries to node -> {}. Retaining chars for now", newNodeId);
-            retryOrTimeout(RESPONSE_FAILURE, recipient);
+            return true;
         }
+
+        return false;
     }
 
     /**
@@ -255,7 +330,7 @@ public class UDPServer implements NodeServer {
 
         int i = 0;
         for (RoutingTableEntry routingTableEntry : entries) {
-            if (nodeNameList.contains(routingTableEntry.getNodeName())) {
+            if (nodeNameList.contains(routingTableEntry.getNodeId())) {
                 inetSocketAddresses[i] = routingTableEntry.getAddress();
                 i++;
             }

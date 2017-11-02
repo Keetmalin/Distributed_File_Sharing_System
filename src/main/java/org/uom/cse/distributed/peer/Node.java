@@ -18,10 +18,12 @@ import static org.uom.cse.distributed.Constants.ADDRESSES_PER_CHARACTER;
 import static org.uom.cse.distributed.Constants.ADDRESS_SPACE_SIZE;
 import static org.uom.cse.distributed.Constants.FILE_NAME_ARRAY;
 import static org.uom.cse.distributed.Constants.GRACE_PERIOD_MS;
+import static org.uom.cse.distributed.Constants.HEARTBEAT_FREQUENCY_MS;
 import static org.uom.cse.distributed.Constants.MAX_FILE_COUNT;
 import static org.uom.cse.distributed.Constants.MIN_FILE_COUNT;
 import static org.uom.cse.distributed.peer.api.State.CONFIGURED;
 import static org.uom.cse.distributed.peer.api.State.CONNECTED;
+import static org.uom.cse.distributed.peer.api.State.CONNECTING;
 import static org.uom.cse.distributed.peer.api.State.IDLE;
 import static org.uom.cse.distributed.peer.api.State.REGISTERED;
 
@@ -46,6 +48,8 @@ public class Node implements RoutingTableListener {
     private final String username;
     private final String ipAddress;
     private final int port;
+
+    private Map<Integer, Map<Character, Map<String, List<EntryTableEntry>>>> predecessorEntries = new HashMap<>();
     private int nodeId;
     private char myChar;
     private ScheduledExecutorService executorService;
@@ -85,7 +89,7 @@ public class Node implements RoutingTableListener {
         udpQuery.initialize(this);
 
         logger.debug("Connecting to the distributed network");
-        while (!stateManager.isState(CONNECTED)) {
+        while (!stateManager.isState(CONNECTING)) {
             if (stateManager.isState(REGISTERED)) {
                 unregister();
             }
@@ -94,12 +98,10 @@ public class Node implements RoutingTableListener {
 
             if (stateManager.isState(REGISTERED)) {
                 Set<RoutingTableEntry> entries = connect(peers);
-
                 // peer size become 0 only when we registered successfully
                 if (peers.size() == 0 || entries.size() > 0) {
-                    logger.debug("Adding routing table entries -> {}", entries);
-                    entries.forEach(routingTable::addEntry);
-                    stateManager.setState(CONNECTED);
+                    this.updateRoutingTable(entries);
+                    stateManager.setState(CONNECTING);
                     logger.info("Successfully connected to the network and created routing table");
                 }
             }
@@ -110,60 +112,44 @@ public class Node implements RoutingTableListener {
         logger.info("Selected node ID -> {}", this.nodeId);
 
         // 2. Add my node to my routing table
-        routingTable.addEntry(new RoutingTableEntry(new InetSocketAddress(ipAddress, port), String.valueOf(this.nodeId)));
+        routingTable.addEntry(new RoutingTableEntry(new InetSocketAddress(ipAddress, port), this.nodeId));
         logger.info("My routing table is -> {}", routingTable.getEntries());
+        stateManager.setState(State.CONNECTED);
 
         // 3. Select my character
         myChar = HashUtils.nodeIdToChar(this.nodeId);
         logger.info("My char is -> {}", myChar);
 
         configure();
+        stateManager.setState(CONFIGURED);
 
         // TODO: 10/24/17 Periodic synchronization
         /*
-         * 1. First, get 2 random entries from the routing table.
-         * 2. Then ask them for routing tables. -> Update mine with that.
-         * 3. Then, send SYNC request to all nodes ... ????
+         * 1. Find 2 predecessors of mine.
+         * 2. Then periodically ping them and synchronize with their entry tables.
+         * 3. If any predecessor has gone down, notify all that my predecessor has gone down.
          */
-        stateManager.setState(CONFIGURED);
+        executorService.schedule(this::runPeriodically, HEARTBEAT_FREQUENCY_MS, TimeUnit.MILLISECONDS);
     }
 
     private void configure() {
         // Calculate my characters
         Optional<RoutingTableEntry> myPredecessor = routingTable.findPredecessorOf(this.nodeId);
         logger.debug("My predecessor is -> {}", myPredecessor);
-        Set<Character> characters = HashUtils.findCharactersOf(this.nodeId, myPredecessor.map(routingTableEntry ->
-                Integer.parseInt(routingTableEntry.getNodeName())).orElse(this.nodeId));
+        Set<Character> characters = HashUtils.findCharactersOf(this.nodeId,
+                myPredecessor.map(RoutingTableEntry::getNodeId).orElse(this.nodeId));
         characters.add(myChar);
         characters.forEach(entryTable::addCharacter);
 
-        // Remove any redundant character
-        //        entryTable.getEntries().keySet().stream()
-        //                .filter(character -> !characters.contains(character))
-        //                .forEach(entryTable::removeCharacter);
-
+        // TODO: 11/1/17 If majority fails in this operation, we need to retry entirely?
         // 5. Broadcast that I have joined the network to all entries in the routing table
-        this.routingTable.getEntries().stream()
-                .filter(entry -> Integer.parseInt(entry.getNodeName()) != this.nodeId)
+        this.routingTable.getEntries().parallelStream()
+                .filter(entry -> entry.getNodeId() != this.nodeId)
                 .forEach(entry -> {
                     Map<Character, Map<String, List<EntryTableEntry>>> toBeUndertaken =
                             communicationProvider.notifyNewNode(
                                     entry.getAddress(), new InetSocketAddress(ipAddress, port), this.nodeId);
-
-                    toBeUndertaken.forEach((letter, keywordMap) -> {
-                        logger.info("Undertaking letter [{}] and keywords -> {}", letter, keywordMap);
-
-                        // First put the letter [A-Z0-9]
-                        entryTable.addCharacter(letter);
-
-                        // Then put the keywords under each letter
-                        keywordMap.forEach((keyword, entryTableEntries) -> {
-                            entryTableEntries.forEach(entryTableEntry -> {
-                                logger.debug("Adding entry-{} for keyword: {} to entry table", entryTableEntry, keyword);
-                                entryTable.addEntry(keyword, entryTableEntry);
-                            });
-                        });
-                    });
+                    this.takeOverEntries(toBeUndertaken);
                 });
 
         // 7. Send my files to corresponding nodes.
@@ -177,7 +163,7 @@ public class Node implements RoutingTableListener {
                 logger.debug("Searching for node or successor in routing table -> {}", entry);
 
                 // Usually an entry should be present.
-                if (entry.isPresent() && Integer.valueOf(entry.get().getNodeName()) != this.nodeId) {
+                if (entry.isPresent() && entry.get().getNodeId() != this.nodeId) {
                     logger.info("Offering keyword ({}-{}) to Node -> {}", keyword, file, entry.get());
 
                     // Couldn't notify the actual owner. Keeping with myself
@@ -188,11 +174,64 @@ public class Node implements RoutingTableListener {
                     }
                 } else {
                     // I should take over this file name
-                    logger.info("I'm indexing ({}-{})", keyword, file);
+                    logger.debug("I'm indexing ({}-{})", keyword, file);
                     entryTable.addEntry(keyword, new EntryTableEntry(String.valueOf(this.nodeId), file));
                 }
             });
         });
+    }
+
+    private void runPeriodically() {
+        // 1. Select 2 predecessors of mine
+        Optional<RoutingTableEntry> predecessor1 = routingTable.findPredecessorOf(this.nodeId);
+        logger.info("Pinging my predecessor for status -> {}", predecessor1);
+
+        if (predecessor1.isPresent()) {
+            RoutingTableEntry p1 = predecessor1.get();
+            Optional<RoutingTableEntry> predecessor2 = routingTable.findPredecessorOf(p1.getNodeId());
+
+            Map<Character, Map<String, List<EntryTableEntry>>> toBeHandedOver = this.getEntriesToHandoverTo(p1.getNodeId());
+            logger.info("Handing over {} to -> {}", toBeHandedOver, p1.getNodeId());
+            Map<Character, Map<String, List<EntryTableEntry>>> entries = communicationProvider.ping(p1.getAddress(), toBeHandedOver);
+
+            boolean immediateSuccessorDead = false;
+            if (entries == null) {
+                logger.warn("My immediate successor -> {} is dead. Taking over", p1);
+                immediateSuccessorDead = true;
+                this.removeNode(p1.getAddress());
+                this.entryTable.addAll(this.predecessorEntries.get(predecessor1.get().getNodeId()));
+            } else {
+                logger.debug("Found my immediate successor -> {}", p1);
+                this.removeEntries(toBeHandedOver.keySet());
+                this.predecessorEntries.put(predecessor1.get().getNodeId(), entries);
+            }
+
+            logger.info("Pinging SECOND immediate predecessor -> {}", predecessor2);
+            if (predecessor2.isPresent() && predecessor2.get().getNodeId() != this.nodeId) {
+                RoutingTableEntry p2 = predecessor2.get();
+
+                toBeHandedOver = this.getEntriesToHandoverTo(p2.getNodeId());
+                logger.info("Handing over {} to -> {}", toBeHandedOver, p2.getNodeId());
+                entries = communicationProvider.ping(p2.getAddress(), toBeHandedOver);
+                if (entries == null) {
+                    logger.warn("My SECOND immediate successor -> {} is dead", p2);
+                    this.removeNode(p2.getAddress());
+
+                    if (immediateSuccessorDead) {
+                        logger.info("Taking over {} which is my SECOND immediate successor", p2);
+                        this.entryTable.addAll(this.predecessorEntries.get(p2.getNodeId()));
+                    }
+                } else {
+                    logger.debug("Found my SECOND immediate successor -> {}", p2);
+                    this.removeEntries(toBeHandedOver.keySet());
+                    this.predecessorEntries.put(predecessor2.get().getNodeId(), entries);
+                }
+            } else {
+                logger.warn("No SECOND immediate predecessor is present");
+            }
+        } else {
+            logger.warn("No immediate predecessor is present");
+        }
     }
 
     /**
@@ -264,7 +303,7 @@ public class Node implements RoutingTableListener {
      */
     private int selectNodeName() {
         Set<Integer> usedNodes = this.routingTable.getEntries().stream()
-                .map(entry -> Integer.parseInt(entry.getNodeName()) / ADDRESSES_PER_CHARACTER)
+                .map(entry -> entry.getNodeId() / ADDRESSES_PER_CHARACTER)
                 .collect(Collectors.toSet());
 
         Random random = new Random();
@@ -286,11 +325,11 @@ public class Node implements RoutingTableListener {
         if (myFiles.size() == 0) {
             //randomly decide the file count to be 3 to 5 files
             Random random = new Random();
-            int fileCount = random.nextInt((MAX_FILE_COUNT - MIN_FILE_COUNT) + 1) + MIN_FILE_COUNT;
+            int fileCount = random.nextInt(MAX_FILE_COUNT + 1) + MIN_FILE_COUNT;
 
             List<String> tempList = Arrays.asList(FILE_NAME_ARRAY);
             Collections.shuffle(tempList);
-            return tempList.subList(0, 1);
+            return tempList.subList(0, fileCount);
         }
         return myFiles;
     }
@@ -307,9 +346,9 @@ public class Node implements RoutingTableListener {
     }
 
     public void addNewNode(String ipAddress, int newNodePort, int newNodeId) {
-        stateManager.checkState(State.CONFIGURED);
+        stateManager.checkState(State.CONNECTED, State.CONFIGURED);
         InetSocketAddress inetSocketAddress = new InetSocketAddress(ipAddress, newNodePort);
-        RoutingTableEntry routingTableEntry = new RoutingTableEntry(inetSocketAddress, String.valueOf(newNodeId));
+        RoutingTableEntry routingTableEntry = new RoutingTableEntry(inetSocketAddress, newNodeId);
         routingTable.addEntry(routingTableEntry);
     }
 
@@ -322,7 +361,7 @@ public class Node implements RoutingTableListener {
      * @return entries to be handed over
      */
     public Map<Character, Map<String, List<EntryTableEntry>>> getEntriesToHandoverTo(int nodeId) {
-        stateManager.checkState(State.CONFIGURED);
+        stateManager.checkState(State.CONFIGURED, State.CONNECTED);
 
         // Find the predecessor of the node given
         Optional<RoutingTableEntry> entryOptional = routingTable.findPredecessorOf(nodeId);
@@ -334,7 +373,7 @@ public class Node implements RoutingTableListener {
         // 2. Now find the characters which should be handled by the new node. i.e: From its predecessor to new node
         RoutingTableEntry predecessor = entryOptional.get();
         logger.debug("Found predecessor {} for node -> {}", predecessor, nodeId);
-        Set<Character> characters = HashUtils.findCharactersOf(nodeId, Integer.parseInt(predecessor.getNodeName()));
+        Set<Character> characters = HashUtils.findCharactersOf(nodeId, predecessor.getNodeId());
         // Adding the new node as well.
         characters.add(HashUtils.nodeIdToChar(nodeId));
 
@@ -350,9 +389,43 @@ public class Node implements RoutingTableListener {
         return toBeHandedOver;
     }
 
+    /**
+     * Adds the entries given in <pre>toBeUndertaken</pre> into my {@link #entryTable}
+     *
+     * @param toBeUndertaken entries to be taken over
+     */
+    public void takeOverEntries(Map<Character, Map<String, List<EntryTableEntry>>> toBeUndertaken) {
+        logger.debug("Undertaking entries -> {}", toBeUndertaken);
+
+        toBeUndertaken.forEach((letter, keywordMap) -> {
+            logger.debug("Undertaking letter [{}] and keywords -> {}", letter, keywordMap);
+
+            // First put the letter [A-Z0-9]
+            entryTable.addCharacter(letter);
+
+            // Then put the keywords under each letter
+            keywordMap.forEach((keyword, entryTableEntries) -> {
+                entryTableEntries.forEach(entryTableEntry -> {
+                    logger.debug("Adding entry-{} for keyword: {} to entry table", entryTableEntry, keyword);
+                    entryTable.addEntry(keyword, entryTableEntry);
+                });
+            });
+        });
+    }
+
+    /**
+     * Updates the {@link #routingTable} with entries coming from another node's routing table
+     *
+     * @param entries routing table entries received from another node
+     */
+    public void updateRoutingTable(Set<RoutingTableEntry> entries) {
+        logger.debug("Adding routing table entries -> {}", entries);
+        // TODO: 11/2/17 Should we sync? Remove what is not present?
+        entries.forEach(routingTable::addEntry);
+    }
 
     public void removeEntries(Set<Character> characters) {
-        stateManager.checkState(State.CONFIGURED);
+        stateManager.checkState(State.CONNECTED, State.CONFIGURED);
         characters.forEach(entryTable::removeCharacter);
     }
 

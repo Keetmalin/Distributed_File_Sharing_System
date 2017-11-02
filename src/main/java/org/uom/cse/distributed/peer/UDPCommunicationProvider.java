@@ -8,6 +8,7 @@ import org.uom.cse.distributed.peer.api.RoutingTableEntry;
 import org.uom.cse.distributed.peer.utils.RequestUtils;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
@@ -25,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 import static org.uom.cse.distributed.Constants.GET_ROUTING_TABLE;
 import static org.uom.cse.distributed.Constants.NEWENTRY_MSG_FORMAT;
 import static org.uom.cse.distributed.Constants.NEWNODE_MSG_FORMAT;
+import static org.uom.cse.distributed.Constants.PING_MSG_FORMAT;
 import static org.uom.cse.distributed.Constants.QUERY_MSG_FORMAT;
 import static org.uom.cse.distributed.Constants.RESPONSE_FAILURE;
 import static org.uom.cse.distributed.Constants.RETRIES_COUNT;
@@ -58,7 +60,7 @@ public class UDPCommunicationProvider extends CommunicationProvider {
         String response = retryOrTimeout(request, peer);
         logger.debug("Received response : {}", response);
         if (response != null) {
-            Object obj = RequestUtils.base64StringToObject(response);
+            Object obj = RequestUtils.base64StringToObject(response.split(" ")[3]);
             logger.debug("Received routing table entries -> {}", obj);
             if (obj != null) {
                 return (HashSet<RoutingTableEntry>) obj;
@@ -74,6 +76,7 @@ public class UDPCommunicationProvider extends CommunicationProvider {
         return false;
     }
 
+    /** {@inheritDoc} */
     @SuppressWarnings("unchecked")
     @Override
     public Map<Character, Map<String, List<EntryTableEntry>>> notifyNewNode(InetSocketAddress peer,
@@ -84,12 +87,13 @@ public class UDPCommunicationProvider extends CommunicationProvider {
         String response = retryOrTimeout(request, peer);
         logger.debug("Received response : {}", response);
         if (response != null) {
-            Object obj = RequestUtils.base64StringToObject(response);
+            Object obj = RequestUtils.base64StringToObject(response.split(" ")[3]);
             logger.debug("Received characters to be taken over -> {}", obj);
             if (obj != null) {
                 return (Map<Character, Map<String, List<EntryTableEntry>>>) obj;
             }
         }
+
         return new HashMap<>();
     }
 
@@ -103,6 +107,7 @@ public class UDPCommunicationProvider extends CommunicationProvider {
         return response != null;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public Set<InetSocketAddress> searchFullFile(InetSocketAddress targetNode, String fileName, String keyword) {
         String request = String.format(QUERY_MSG_FORMAT, keyword, fileName);
@@ -126,16 +131,52 @@ public class UDPCommunicationProvider extends CommunicationProvider {
         return new HashSet<>();
     }
 
+    /** {@inheritDoc} */
+    @SuppressWarnings("unchecked")
+    public Map<Character, Map<String, List<EntryTableEntry>>> ping(InetSocketAddress peer,
+            Map<Character, Map<String, List<EntryTableEntry>>> toBeHandedOver) {
+        String base64 = null;
+        try {
+            base64 = RequestUtils.buildObjectRequest(toBeHandedOver);
+        } catch (IOException e) {
+            logger.error("Error occurred when encoding entries to be handed over to -> {}", peer, e);
+            throw new IllegalArgumentException("Unable to encode entries", e);
+        }
+
+        String msg = String.format(PING_MSG_FORMAT, this.node.getNodeId(), base64);
+        String request = RequestUtils.buildRequest(msg);
+        logger.debug("Pinging -> {}", peer);
+        String response = retryOrTimeout(1, request, peer);
+        logger.debug("Received response : {}", response);
+        if (response != null) {
+            Object obj = RequestUtils.base64StringToObject(response);
+            logger.debug("Received entry table of ({}) -> {}", peer, obj);
+            if (obj != null) {
+                return (Map<Character, Map<String, List<EntryTableEntry>>>) obj;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @see #retryOrTimeout(int, String, InetSocketAddress)
+     */
+    private String retryOrTimeout(String request, InetSocketAddress peer) {
+        return retryOrTimeout(numOfRetries, request, peer);
+    }
+
     /**
      * This method retries a given requests or times out of that request fails. Tries for maximum of {@link
      * UDPCommunicationProvider#numOfRetries}
      *
+     * @param retries Number of times should be retried
      * @param request request to be sent
      * @param peer    to whom the request is sent
      * @return null | response
      */
-    private String retryOrTimeout(String request, InetSocketAddress peer) {
-        int retriesLeft = numOfRetries;
+    private String retryOrTimeout(int retries, String request, InetSocketAddress peer) {
+        int retriesLeft = retries;
         while (retriesLeft > 0) {
             Future<String> task = executorService.submit(() -> {
                 try (DatagramSocket datagramSocket = new DatagramSocket()) {
@@ -156,7 +197,9 @@ public class UDPCommunicationProvider extends CommunicationProvider {
         }
 
         logger.error("REQUEST FAILED !!! ({} -> {})", request, peer);
-        this.node.removeNode(peer);
+        if (retries == numOfRetries) {
+            this.node.removeNode(peer);
+        }
         return null;
     }
 

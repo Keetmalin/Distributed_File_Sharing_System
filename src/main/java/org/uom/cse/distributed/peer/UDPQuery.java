@@ -43,8 +43,8 @@ public class UDPQuery implements QueryInterface {
             Optional<RoutingTableEntry> entry = this.node.getRoutingTable().findNodeOrSuccessor(nodeId);
 
             // the entry should be a different node (not itself)
-            if (entry.isPresent() && Integer.parseInt(entry.get().getNodeName()) != node.getNodeId()) {
-                logger.debug("searching for the node in Node {}", entry.get().getNodeName());
+            if (entry.isPresent() && entry.get().getNodeId() != node.getNodeId()) {
+                logger.debug("searching for the node in Node {}", entry.get().getNodeId());
                 inetSocketAddresses = this.node.getCommunicationProvider().searchFullFile(entry.get().getAddress(), fileName, keyword);
             } else {
                 logger.debug("Entry is not present");

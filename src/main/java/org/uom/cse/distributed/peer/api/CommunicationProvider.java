@@ -64,9 +64,18 @@ public abstract class CommunicationProvider {
      * This will search for a file name in the entire system and return the list of nodes {@link InetSocketAddress}
      *
      * @param targetNode {@link InetSocketAddress} the node that needs to be searched
-     * @param fileName the name of the file that needs to be searched
-     * @param keyword keyword to be send
-     * @return  Return a set of {@link InetSocketAddress}
+     * @param fileName   the name of the file that needs to be searched
+     * @param keyword    keyword to be send
+     * @return Return a set of {@link InetSocketAddress}
      */
-    public abstract Set<InetSocketAddress> searchFullFile(InetSocketAddress targetNode , String fileName, String keyword);
+    public abstract Set<InetSocketAddress> searchFullFile(InetSocketAddress targetNode, String fileName, String keyword);
+
+    /**
+     * Pings the given node and returns the {@link EntryTable#entries} of that node.
+     *
+     * @param peer peer to be pinged
+     * @return null if the peer couldn't be found | else entries
+     */
+    public abstract Map<Character, Map<String, List<EntryTableEntry>>> ping(InetSocketAddress peer,
+            Map<Character, Map<String, List<EntryTableEntry>>> toBeHandedOver);
 }

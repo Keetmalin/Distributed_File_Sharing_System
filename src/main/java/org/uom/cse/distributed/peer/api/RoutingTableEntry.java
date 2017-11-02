@@ -12,39 +12,39 @@ import java.net.InetSocketAddress;
 public class RoutingTableEntry implements Serializable {
 
     private InetSocketAddress address;
-    private String nodeName;
+    private int nodeId;
 
-    public RoutingTableEntry(InetSocketAddress address, String nodeName) {
-        if (address == null || nodeName == null) {
+    public RoutingTableEntry(InetSocketAddress address, int nodeId) {
+        if (address == null || nodeId <= 0) {
             throw new IllegalArgumentException("Address and Node name should not be null");
         }
 
         this.address = address;
-        this.nodeName = nodeName;
+        this.nodeId = nodeId;
     }
 
     public InetSocketAddress getAddress() {
         return address;
     }
 
-    public String getNodeName() {
-        return nodeName;
+    public int getNodeId() {
+        return nodeId;
     }
 
-    public void setNodeName(String nodeName) {
-        this.nodeName = nodeName;
+    public void setNodeId(int nodeId) {
+        this.nodeId = nodeId;
     }
 
     @Override
     public boolean equals(Object o) {
         return o != null &&
                 o instanceof RoutingTableEntry &&
-                this.getNodeName().equals(((RoutingTableEntry) o).getNodeName()) &&
+                this.getNodeId() == ((RoutingTableEntry) o).getNodeId() &&
                 this.getAddress().equals(((RoutingTableEntry) o).getAddress());
     }
 
     @Override
     public String toString() {
-        return String.format("[%s -> %s]", nodeName, address);
+        return String.format("[%d -> %s]", nodeId, address);
     }
 }

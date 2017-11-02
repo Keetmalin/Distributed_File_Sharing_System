@@ -71,7 +71,7 @@ public class CLI {
                         break;
                     case "routingTable":
                         node.getRoutingTable().getEntries()
-                                .forEach(entry -> System.out.println(entry.getNodeName() + " -> " + entry.getAddress().toString()));
+                                .forEach(entry -> System.out.println(entry.getNodeId() + " -> " + entry.getAddress().toString()));
                         break;
                     case "help":
                         System.out.println("stop | node | state | search | routingTable");
