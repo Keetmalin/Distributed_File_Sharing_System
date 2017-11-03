@@ -7,6 +7,7 @@ import org.uom.cse.distributed.peer.api.RoutingTableEntry;
 import org.uom.cse.distributed.peer.utils.HashUtils;
 
 import java.net.InetSocketAddress;
+import java.util.ListIterator;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -42,6 +43,8 @@ public class UDPQuery implements QueryInterface {
             int nodeId = HashUtils.keywordToNodeId(keyword);
             Optional<RoutingTableEntry> entry = this.node.getRoutingTable().findNodeOrSuccessor(nodeId);
 
+            //check whether the entry is not there
+
             // the entry should be a different node (not itself)
             if (entry.isPresent() && entry.get().getNodeId() != node.getNodeId()) {
                 logger.debug("searching for the node in Node {}", entry.get().getNodeId());
@@ -56,6 +59,11 @@ public class UDPQuery implements QueryInterface {
 
     @Override
     public boolean searchMyFilesFullName(String fileName) {
-        return this.node.getMyFiles().contains(fileName);
+        for (String s : this.node.getMyFiles()) {
+            if (fileName.toLowerCase().equals(s.toLowerCase())) {
+                return true;
+            }
+        }
+        return false;
     }
 }
