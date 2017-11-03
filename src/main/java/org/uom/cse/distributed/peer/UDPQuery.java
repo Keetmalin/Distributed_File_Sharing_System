@@ -23,13 +23,16 @@ public class UDPQuery implements QueryInterface {
 
     private Node node;
     private Set<InetSocketAddress> inetSocketAddresses;
+    private int hopCount;
 
     public void initialize(Node node) {
         this.node = node;
+        this.hopCount = 0;
     }
 
     @Override
     public void searchFullFile(String fileName) {
+        hopCount = 0;
         // 1. First look in the same node for the requested file name
         if (searchMyFilesFullName(fileName)) {
             logger.info("file name {} is available in your node itself", fileName);
@@ -43,8 +46,6 @@ public class UDPQuery implements QueryInterface {
             int nodeId = HashUtils.keywordToNodeId(keyword);
             Optional<RoutingTableEntry> entry = this.node.getRoutingTable().findNodeOrSuccessor(nodeId);
 
-            //check whether the entry is not there
-
             // the entry should be a different node (not itself)
             if (entry.isPresent() && entry.get().getNodeId() != node.getNodeId()) {
                 logger.debug("searching for the node in Node {}", entry.get().getNodeId());
@@ -54,6 +55,7 @@ public class UDPQuery implements QueryInterface {
             }
         });
 
+        hopCount = this.node.getCommunicationProvider().getQueryHopCount();
         logger.info("Search results -> {}", inetSocketAddresses);
     }
 

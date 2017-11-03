@@ -78,4 +78,6 @@ public abstract class CommunicationProvider {
      */
     public abstract Map<Character, Map<String, List<EntryTableEntry>>> ping(InetSocketAddress peer,
             Map<Character, Map<String, List<EntryTableEntry>>> toBeHandedOver);
+
+    public abstract int getQueryHopCount();
 }
