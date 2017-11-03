@@ -146,6 +146,11 @@ public class RestCommunicationProvider extends CommunicationProvider {
         return set;
     }
 
+    @Override
+    public Map<Character, Map<String, List<EntryTableEntry>>> ping(InetSocketAddress peer, Map<Character, Map<String, List<EntryTableEntry>>> toBeHandedOver) {
+        return null;
+    }
+
     private ClientResponse getResponse(String url) {
 
         Client client = Client.create();
