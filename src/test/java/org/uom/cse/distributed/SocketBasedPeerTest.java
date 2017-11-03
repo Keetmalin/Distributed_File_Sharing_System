@@ -34,10 +34,15 @@ public class SocketBasedPeerTest {
 
     private static final Logger logger = LoggerFactory.getLogger(SocketBasedPeerTest.class);
 
-    private static final int NODE_COUNT = 6;
+    private static final int NODE_COUNT = 1;
     private static BootstrapServer bootstrapServer;
 
     private AtomicInteger atomicInteger = new AtomicInteger(0);
+
+    public List<Node> getNodes() {
+        return nodes;
+    }
+
     private final List<Node> nodes = new ArrayList<>();
 
     @BeforeMethod

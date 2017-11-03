@@ -21,14 +21,14 @@ public class PerformanceMeasure {
     private static final Logger logger = LoggerFactory.getLogger(Node.class);
     private Node node;
 
-    public PerformanceMeasure(Node node){
+    public PerformanceMeasure(Node node) {
         this.node = node;
     }
 
-    public long calculateQueryLatency(int testCount) {
+    public float calculateQueryLatency(int testCount) {
 
         long timeSum = 0;
-        logger.info("Calculating Average latency for {} times" , testCount);
+        logger.info("Calculating Average latency for {} times", testCount);
 
         Random random = new Random();
 
@@ -38,30 +38,34 @@ public class PerformanceMeasure {
             String fileName = FILE_NAME_ARRAY[fileIndex];
 
             long startTime = System.currentTimeMillis();
+
+            logger.info("Querying for file : {} ", fileName);
             this.node.getUdpQuery().searchFullFile(fileName);
 
             long stopTime = System.currentTimeMillis();
             timeSum += stopTime - startTime;
 
         }
-        return timeSum/testCount;
+        return (float) timeSum / (float) testCount;
     }
 
-    public float calculateQueryHopCount(int testCount){
+    public float calculateQueryHopCount(int testCount) {
 
         int countSum = 0;
-        logger.info("Calculating Average Hop Count for {} times" , testCount);
+        logger.info("Calculating Average Hop Count for {} times", testCount);
         Random random = new Random();
 
-        for (int i = 0 ; i < testCount ; i++){
+        for (int i = 0; i < testCount; i++) {
             int fileIndex = random.nextInt(FILE_NAME_ARRAY.length);
             String fileName = FILE_NAME_ARRAY[fileIndex];
 
+            logger.info("Querying for file : {} ", fileName);
             this.node.getUdpQuery().searchFullFile(fileName);
 
-            countSum += this.node.getCommunicationProvider().getQueryHopCount();
+
+            countSum += this.node.getUdpQuery().getHopCount();
         }
 
-        return (float) countSum/ (float) testCount;
+        return (float) countSum / (float) testCount;
     }
 }

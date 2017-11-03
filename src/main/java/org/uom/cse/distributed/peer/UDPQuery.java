@@ -7,6 +7,7 @@ import org.uom.cse.distributed.peer.api.RoutingTableEntry;
 import org.uom.cse.distributed.peer.utils.HashUtils;
 
 import java.net.InetSocketAddress;
+import java.util.HashSet;
 import java.util.ListIterator;
 import java.util.Optional;
 import java.util.Set;
@@ -28,6 +29,7 @@ public class UDPQuery implements QueryInterface {
     public void initialize(Node node) {
         this.node = node;
         this.hopCount = 0;
+        this.inetSocketAddresses = new HashSet<>();
     }
 
     @Override
@@ -48,6 +50,7 @@ public class UDPQuery implements QueryInterface {
 
             // the entry should be a different node (not itself)
             if (entry.isPresent() && entry.get().getNodeId() != node.getNodeId()) {
+                hopCount = this.node.getCommunicationProvider().getQueryHopCount();
                 logger.debug("searching for the node in Node {}", entry.get().getNodeId());
                 inetSocketAddresses = this.node.getCommunicationProvider().searchFullFile(entry.get().getAddress(), fileName, keyword);
             } else {
@@ -55,7 +58,7 @@ public class UDPQuery implements QueryInterface {
             }
         });
 
-        hopCount = this.node.getCommunicationProvider().getQueryHopCount();
+
         logger.info("Search results -> {}", inetSocketAddresses);
     }
 
@@ -67,5 +70,10 @@ public class UDPQuery implements QueryInterface {
             }
         }
         return false;
+    }
+
+    @Override
+    public int getHopCount() {
+        return hopCount;
     }
 }

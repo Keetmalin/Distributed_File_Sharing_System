@@ -57,8 +57,8 @@ public class Constants {
     public static final String PING = "PING";
 
     /** File name generation and relevant constants **/
-    public static final int MIN_FILE_COUNT = 2;
-    public static final int MAX_FILE_COUNT = MIN_FILE_COUNT + 3;
+    public static final int MIN_FILE_COUNT = 3;
+    public static final int MAX_FILE_COUNT = MIN_FILE_COUNT + 2;
     public static final String[] FILE_NAME_ARRAY = {"Adventures of Tintin", "Jack and Jill", "Glee",
             "The Vampire Diarie", "King Arthur", "Windows XP", "Harry Potter", "Kung Fu Panda", "Lady Gaga", "Twilight",
             "Windows 8", "Mission Impossible", "Turn Up The Music", "Super Mario", "American Pickers",

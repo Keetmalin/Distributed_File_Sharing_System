@@ -26,4 +26,6 @@ public interface QueryInterface {
      * @return a boolean mentioning whether the file is contained within the node or not
      */
     public boolean searchMyFilesFullName(String fileName);
+
+    public int getHopCount();
 }

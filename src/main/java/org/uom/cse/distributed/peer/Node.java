@@ -325,7 +325,7 @@ public class Node implements RoutingTableListener {
         if (myFiles.size() == 0) {
             //randomly decide the file count to be 3 to 5 files
             Random random = new Random();
-            int fileCount = random.nextInt(MAX_FILE_COUNT + 1) + MIN_FILE_COUNT;
+            int fileCount = random.nextInt(MAX_FILE_COUNT - MIN_FILE_COUNT + 1) + MIN_FILE_COUNT;
 
             List<String> tempList = Arrays.asList(FILE_NAME_ARRAY);
             Collections.shuffle(tempList);
