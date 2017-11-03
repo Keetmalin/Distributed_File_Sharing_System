@@ -3,6 +3,8 @@ package org.uom.cse.distributed.peer.rest;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
+import org.glassfish.jersey.server.ResourceConfig;
+import org.glassfish.jersey.servlet.ServletContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.uom.cse.distributed.peer.Node;
@@ -37,8 +39,11 @@ public class RestNodeServer implements NodeServer {
         jettyServer.setHandler(context);
 
         NodeController nodeController = new NodeController();
-        ServletHolder jerseyServlet = context.addServlet(
-                org.glassfish.jersey.servlet.ServletContainer.class, "/*");
+
+        ResourceConfig config = new ResourceConfig();
+        config.register(nodeController);
+        ServletContainer servletContainer = new ServletContainer(config);
+        ServletHolder jerseyServlet = new ServletHolder(servletContainer);
         jerseyServlet.setInitOrder(0);
 
         // Tells the Jersey Servlet which REST service/class to load.
