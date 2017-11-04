@@ -1,4 +1,4 @@
-package org.uom.cse.distributed.peer.rest;
+package org.uom.cse.distributed.peer.RestServices;
 
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;

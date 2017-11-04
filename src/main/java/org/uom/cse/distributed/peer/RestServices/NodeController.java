@@ -1,4 +1,4 @@
-package org.uom.cse.distributed.peer.rest;
+package org.uom.cse.distributed.peer.RestServices;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
