@@ -77,8 +77,6 @@ public class SocketBasedPeerTest {
             Assert.assertEquals(node.getState(), IDLE);
             Assert.assertEquals(node.getRoutingTable().getEntries().size(), 0);
         });
-
-
     }
 
     @Test

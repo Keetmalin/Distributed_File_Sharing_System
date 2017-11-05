@@ -8,11 +8,19 @@ import org.glassfish.jersey.servlet.ServletContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.uom.cse.distributed.peer.Node;
+import org.uom.cse.distributed.peer.api.EntryTableEntry;
 import org.uom.cse.distributed.peer.api.NodeServer;
+import org.uom.cse.distributed.peer.utils.RequestUtils;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 import static org.uom.cse.distributed.Constants.RETRIES_COUNT;
+import static org.uom.cse.distributed.Constants.SYNC_MSG_FORMAT;
+import static org.uom.cse.distributed.Constants.TYPE_ENTRIES;
 
 /**
  * This Class provides the implementation of the server side, of each of the nodes.
@@ -32,32 +40,46 @@ public class RestNodeServer implements NodeServer {
 
     @Override
     public void start(Node node) {
+        if (started) {
+            logger.warn("Listener already running");
+        }else {
         this.node = node;
-        ServletContextHandler context = new ServletContextHandler(ServletContextHandler.SESSIONS);
-        context.setContextPath("/");
-        jettyServer = new Server(node.getPort());
-        jettyServer.setHandler(context);
-
-        NodeController nodeController = new NodeController();
 
         ResourceConfig config = new ResourceConfig();
-        config.register(nodeController);
-        ServletContainer servletContainer = new ServletContainer(config);
-        ServletHolder jerseyServlet = new ServletHolder(servletContainer);
-        jerseyServlet.setInitOrder(0);
+        config.packages("RestServices");
+        ServletHolder servlet = new ServletHolder(new ServletContainer(config));
 
-        // Tells the Jersey Servlet which REST service/class to load.
-        jerseyServlet.setInitParameter("jersey.config.server.provider.classnames",
-                NodeController.class.getCanonicalName());
+        jettyServer = new Server(node.getPort());
+        ServletContextHandler context = new ServletContextHandler(jettyServer,"/*");
+        context.addServlet(servlet,"/*");
 
         try {
             jettyServer.start();
+//            jettyServer.join();
         } catch (Exception e) {
             logger.error("Error occurred when starting REST server due to : {}", e.getMessage());
         }
 
         logger.info("REST Server started successfully ...");
+        }
     }
+
+
+
+    private boolean handoverEntries(int nodeId, InetSocketAddress recipient) throws IOException {
+
+        return false;
+    }
+
+
+
+
+
+
+
+
+
+
 
     @Override
     public void stop() {
@@ -75,5 +97,6 @@ public class RestNodeServer implements NodeServer {
     public void listen() {
 
     }
+
 
 }

@@ -1,7 +1,6 @@
 package org.uom.cse.distributed.peer.RestServices;
 
 
-
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.sun.jersey.api.client.Client;
@@ -10,19 +9,26 @@ import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.client.config.ClientConfig;
 import com.sun.jersey.api.client.config.DefaultClientConfig;
 
+import org.glassfish.jersey.client.JerseyClientBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.uom.cse.distributed.peer.Node;
 import org.uom.cse.distributed.peer.api.CommunicationProvider;
 import org.uom.cse.distributed.peer.api.EntryTableEntry;
+import org.uom.cse.distributed.peer.api.RoutingTable;
 import org.uom.cse.distributed.peer.api.RoutingTableEntry;
 
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriBuilder;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.Type;
 import java.net.InetSocketAddress;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 
 /**
@@ -34,17 +40,21 @@ public class RestCommunicationProvider extends CommunicationProvider {
     /**
      * Logger to log the events.
      */
-    private static final Logger LOGGER = LoggerFactory.getLogger(RestCommunicationProvider.class);
+    private static final Logger logger = LoggerFactory.getLogger(RestCommunicationProvider.class);
 
     // Create Jersey client
 
     ClientConfig clientConfig = new DefaultClientConfig();
+    private ExecutorService executorService;
 
-
-
+    private Node node;
 
     @Override
     public void start(Node node) {
+        this.node = node;
+        //this.queryHopCount = 1;
+        executorService = Executors.newCachedThreadPool();
+        logger.info("Communication provider started");
 
     }
 
@@ -54,27 +64,42 @@ public class RestCommunicationProvider extends CommunicationProvider {
     }
 
 
+    //    @Override
+//    public Set<RoutingTableEntry> connect(InetSocketAddress peer) {
+//        String ipAddress = peer.getHostName();
+//        int port = peer.getPort();
+//        String stringURL = "http://" + ipAddress + ":" + String.valueOf(port) + "/getRoutingTable";
+//        HashSet<RoutingTableEntry> set = new HashSet<>();
+//        javax.ws.rs.client.Client client = JerseyClientBuilder.createClient();
+//        try {
+//            ClientResponse response = getResponse(stringURL);
+//            if (response != null) {
+//                Gson gson = new Gson();
+//                Type type = new TypeToken<HashSet<RoutingTableEntry>>() {
+//                }.getType();
+//                set = gson.fromJson(getStringResponse(response), type);
+//            }
+//
+//        } catch (Exception e) {
+//            LOGGER.error("Error occurred when obtaining routing table", e);
+//        }
+//        return set;
+//    }
     @Override
     public Set<RoutingTableEntry> connect(InetSocketAddress peer) {
         String ipAddress = peer.getHostName();
         int port = peer.getPort();
-        String stringURL = "http://" + ipAddress + ":" + String.valueOf(port) + "/getRoutingTable";
-        HashSet<RoutingTableEntry> set = new HashSet<>();
-
-        try {
-
-            ClientResponse response = getResponse(stringURL);
-            if (response != null) {
-                Gson gson = new Gson();
-                Type type = new TypeToken<HashSet<RoutingTableEntry>>() {
-                }.getType();
-                set =  gson.fromJson(getStringResponse(response), type);
-            }
-
-        } catch (Exception e) {
-            LOGGER.error("Error occurred when obtaining routing table", e);
-        }
-        return set;
+      String stringURL = "http://" + ipAddress + ":" + String.valueOf(port) + "/nodecontroller/getRoutingTable";
+//        UriBuilder stringURL = UriBuilder.fromPath("/*")
+//                .path("nodecontroller")
+//                .scheme("http")
+//                .path("getRoutingTable")
+//                .host("localhost")
+//                .port(8085);
+        javax.ws.rs.client.Client client = JerseyClientBuilder.createClient();
+        Response response = client.target(stringURL).request(MediaType.APPLICATION_JSON_TYPE).get();
+        Set<RoutingTableEntry> routingTableEntries = (Set<RoutingTableEntry>) client.target(stringURL).request(MediaType.APPLICATION_JSON_TYPE).get();
+        return routingTableEntries;
     }
 
     @Override
@@ -89,15 +114,14 @@ public class RestCommunicationProvider extends CommunicationProvider {
         int peer_port = me.getPort();
         String my_ipAddress = peer.getHostName();
         int my_port = me.getPort();
-        String stringURL = "http://" + peer_ipAddress + ":" + String.valueOf(peer_port) + "/getRoutingTable" + "/" + my_ipAddress + "/" + String.valueOf(my_port) + "/" + String.valueOf(nodeId);
+        String stringURL = "http://" + peer_ipAddress + ":" + String.valueOf(peer_port) + "/NotifyNewNode" + "/" + my_ipAddress + "/" + String.valueOf(my_port) + "/" + String.valueOf(nodeId);
         try {
-
-            LOGGER.debug("Notifying new node to {} as message: {}", peer);
+            logger.debug("Notifying new node to {} as message: {}", peer);
             ClientResponse response = getResponse(stringURL);
             String json_response = getStringResponse(response);
-            LOGGER.debug("Received response : {}", json_response);
+            logger.debug("Received response : {}", json_response);
         } catch (IOException e) {
-            LOGGER.debug("");
+            logger.debug("");
         }
 
         return new HashMap<>();
@@ -112,13 +136,13 @@ public class RestCommunicationProvider extends CommunicationProvider {
         ClientResponse response = null;
         try {
 
-            LOGGER.debug("Sending request to get the routing table from {}", peer);
+            logger.debug("Sending request to get the routing table from {}", peer);
             response = getResponse(stringURL);
 
             String json_response = getStringResponse(response);
-            LOGGER.debug("Received response: {}", json_response);
+            logger.debug("Received response: {}", json_response);
         } catch (IOException e) {
-            LOGGER.debug("");
+            logger.debug("");
         }
         return response != null;
     }
@@ -127,21 +151,21 @@ public class RestCommunicationProvider extends CommunicationProvider {
     public Set<InetSocketAddress> searchFullFile(InetSocketAddress targetNode, String fileName, String keyword) {
         String ipAddress = targetNode.getHostName();
         int port = targetNode.getPort();
-        String stringURL = "http://" + ipAddress + ":" + String.valueOf(port) + "/searchFile" + "/" + fileName +"/" + keyword;
+        String stringURL = "http://" + ipAddress + ":" + String.valueOf(port) + "/searchFile" + "/" + fileName + "/" + keyword;
         HashSet<InetSocketAddress> set = new HashSet<>();
         try {
-            LOGGER.debug("Searching filename: {} , with keyword: {} in the network", fileName, keyword);
+            logger.debug("Searching filename: {} , with keyword: {} in the network", fileName, keyword);
             ClientResponse response = getResponse(stringURL);
-            LOGGER.debug("Received response ");
+            logger.debug("Received response ");
             if (response != null) {
                 Gson gson = new Gson();
                 Type type = new TypeToken<HashSet<InetSocketAddress>>() {
                 }.getType();
-                set =  gson.fromJson(getStringResponse(response), type);
+                set = gson.fromJson(getStringResponse(response), type);
             }
 
         } catch (Exception e) {
-            LOGGER.error("Error occurred when obtaining routing table", e);
+            logger.error("Error occurred when obtaining routing table", e);
         }
         return set;
     }
@@ -157,7 +181,6 @@ public class RestCommunicationProvider extends CommunicationProvider {
     }
 
     private ClientResponse getResponse(String url) {
-
         Client client = Client.create();
         WebResource webResource = client
                 .resource(url);
@@ -167,10 +190,10 @@ public class RestCommunicationProvider extends CommunicationProvider {
             throw new RuntimeException("Failed : HTTP error code : "
                     + response.getStatus());
         }
-        return  response;
+        return response;
     }
 
-    private String getStringResponse (ClientResponse response) throws IOException {
+    private String getStringResponse(ClientResponse response) throws IOException {
 
         if (response != null) {
             String json_response = "";

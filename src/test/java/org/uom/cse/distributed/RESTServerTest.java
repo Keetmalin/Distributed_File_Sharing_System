@@ -52,21 +52,58 @@ public class RESTServerTest {
     }
 
     @Test
-    public void getCameraIdTest() {
-        Client client = JerseyClientBuilder.createClient();
+    public void RESTtestNodeInitializationParallel() throws InterruptedException {
+        ExecutorService executorService = Executors.newFixedThreadPool(NODE_COUNT,
+                r -> new Thread(r, "node-" + atomicInteger.getAndIncrement()));
 
-        UriBuilder builder = UriBuilder.fromPath("api")
-                .scheme("http")
-                .host("localhost")
-                .port(35002)
-                .path("v1")
-                .path("nodecontroller")
-                .path("RouteTable");
+        for (Node node : nodes) {
+            executorService.submit(() -> {
+                node.start();
+                logger.info("\n****************** Node {} Done *******************\n", node.getPort());
+            });
+        }
 
-        RoutingTable table = client.target(builder)
-                .request(MediaType.APPLICATION_JSON)
-                .get(RoutingTable.class);
+        Thread.sleep(50000);
 
+        for (Node node : nodes) {
+            Assert.assertEquals(node.getState(), CONFIGURED, String.format("%d is not configured", node.getNodeId()));
+        }
+
+        checkNodes(nodes);
+        executorService.shutdownNow();
+        executorService.awaitTermination(5000, TimeUnit.MILLISECONDS);
+    }
+
+    private static void checkNodes(List<Node> nodes) {
+        nodes.stream()
+                .sorted(Comparator.comparingInt(Node::getNodeId))
+                .forEach(node -> {
+                    logger.info("{} -> {}\t: Characters -> {}", node.getNodeId(), node.getMyChar(),
+                            node.getEntryTable().getEntries().keySet());
+                });
+
+        RoutingTable routingTable = new RoutingTable();
+        nodes.forEach(node -> routingTable.addEntry(new RoutingTableEntry(new InetSocketAddress(node.getIpAddress(),
+                node.getPort()), node.getNodeId())));
+
+        for (Node node : nodes) {
+            Optional<RoutingTableEntry> myPredecessor = routingTable.findPredecessorOf(node.getNodeId());
+            if (node.getRoutingTable().getEntries().size() > 1) {
+                Assert.assertTrue(myPredecessor.isPresent());
+            } else {
+                continue;
+            }
+
+            Set<Character> characters = HashUtils.findCharactersOf(node.getNodeId(), myPredecessor.get().getNodeId());
+            characters.add(node.getMyChar());
+            logger.debug("{}({}) -> {}", node.getNodeId(), node.getMyChar(), characters);
+            for (Character character : characters) {
+                Assert.assertTrue(node.getEntryTable().getEntries().containsKey(character),
+                        String.format("%d -> %s", node.getNodeId(), character));
+            }
+
+            Assert.assertEquals(characters.size(), node.getEntryTable().getEntries().size());
+        }
     }
 
     @AfterMethod
