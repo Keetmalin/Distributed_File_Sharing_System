@@ -75,8 +75,11 @@ public class CLI {
                         node.getRoutingTable().getEntries()
                                 .forEach(entry -> System.out.println(entry.getNodeId() + " -> " + entry.getAddress().toString()));
                         break;
+                    case "myFiles":
+                        System.out.println(node.getMyFiles());
+                        break;
                     case "help":
-                        System.out.println("stop | node | state | search | routingTable");
+                        System.out.println("stop | node | state | search | routingTable | myFiles");
                         break;
                     default:
                         System.out.println("Command not identified");
