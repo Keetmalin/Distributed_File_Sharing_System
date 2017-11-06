@@ -9,6 +9,8 @@ import org.uom.cse.distributed.peer.Node;
 import org.uom.cse.distributed.peer.UDPCommunicationProvider;
 import org.uom.cse.distributed.peer.UDPServer;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Scanner;
 import java.util.UUID;
 
@@ -20,7 +22,7 @@ import java.util.UUID;
  */
 public class CLI {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws UnknownHostException {
         CmdLineOptions options = new CmdLineOptions();
         CmdLineParser parser = new CmdLineParser(options);
 
@@ -93,7 +95,7 @@ public class CLI {
         private int port = 32050;
 
         @Option(name = "-ip", usage = "IP address of the node. (default: localhost)")
-        private String ipAddress = "127.0.0.1";
+        private String ipAddress = String.valueOf(InetAddress.getLocalHost().getHostAddress());
 
         @Option(name = "-bs-ip", usage = "IP address of the Bootstrap Server. (default: localhost)")
         private String bsIpAddress = Constants.BOOTSTRAP_IP;
@@ -103,6 +105,9 @@ public class CLI {
 
         @Option(name = "-username", usage = "Username of the node (default: A random UUID)")
         private String username = UUID.randomUUID().toString();
+
+        private CmdLineOptions() throws UnknownHostException {
+        }
 
         public int getPort() {
             return port;
