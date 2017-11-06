@@ -1,23 +1,24 @@
-package org.uom.cse.distributed.peer.RestServices;
+package org.uom.cse.distributed.peer.rest;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.uom.cse.distributed.peer.Node;
 import org.uom.cse.distributed.peer.api.EntryTableEntry;
-import org.uom.cse.distributed.peer.utils.RequestUtils;
 
-import javax.ws.rs.*;
-import javax.ws.rs.client.Entity;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.GET;
+import javax.ws.rs.POST;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
-import static org.uom.cse.distributed.Constants.SYNC_MSG_FORMAT;
-import static org.uom.cse.distributed.Constants.TYPE_ENTRIES;
-
-@Path("/nodecontroller")
+@Path("/")
+@Consumes(MediaType.APPLICATION_JSON)
+@Produces(MediaType.APPLICATION_JSON)
 public class NodeController {
 
     private static final Logger logger = LoggerFactory.getLogger(NodeController.class);
@@ -29,7 +30,6 @@ public class NodeController {
 
     @GET
     @Path("/getRoutingTable")
-    @Produces(MediaType.TEXT_PLAIN)
     public Response RouteTable() {
         try {
             return Response.ok(node.getRoutingTable().getEntries()).build();
@@ -41,7 +41,6 @@ public class NodeController {
 
     @GET
     @Path("/NotifyNewNode/{ip}/{port}/{id}")
-    @Produces(MediaType.TEXT_PLAIN)
     public Response NewNode(@PathParam("ip") String ip, @PathParam("port") int port, @PathParam("id") int id) {
         try {
             node.addNewNode(ip, port, id);
@@ -63,7 +62,6 @@ public class NodeController {
 
     @POST
     @Path("/NewEntry/{keyWord}")
-    @Produces(MediaType.TEXT_PLAIN)
     public Response NewEntry(EntryTableEntry entry, @PathParam("keyWord") String key) {
         node.getEntryTable().addEntry(key, entry);
         return Response.status(200).build();
@@ -72,7 +70,6 @@ public class NodeController {
 
     @GET
     @Path("/Query/{keyWord}")
-    @Produces(MediaType.TEXT_PLAIN)
     public Response Query(@PathParam("keyWord") String key) {
         return Response.ok(node.getEntryTable().getEntriesByKyeword(key)).build();
     }

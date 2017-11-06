@@ -14,6 +14,8 @@ public class RoutingTableEntry implements Serializable {
     private InetSocketAddress address;
     private int nodeId;
 
+    public RoutingTableEntry() { }
+
     public RoutingTableEntry(InetSocketAddress address, int nodeId) {
         if (address == null || nodeId <= 0) {
             throw new IllegalArgumentException("Address and Node name should not be null");
@@ -33,6 +35,10 @@ public class RoutingTableEntry implements Serializable {
 
     public void setNodeId(int nodeId) {
         this.nodeId = nodeId;
+    }
+
+    public void setAddress(InetSocketAddress address) {
+        this.address = address;
     }
 
     @Override

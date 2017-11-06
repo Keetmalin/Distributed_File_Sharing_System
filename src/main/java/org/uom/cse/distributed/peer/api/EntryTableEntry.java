@@ -12,6 +12,8 @@ public class EntryTableEntry implements Serializable {
     private String file;
     private String nodeName;
 
+    public EntryTableEntry() { }
+
     public EntryTableEntry(String nodeName, String file) {
         if (nodeName == null || file == null) {
             throw new IllegalArgumentException("Node name and File should not be null");
@@ -31,6 +33,10 @@ public class EntryTableEntry implements Serializable {
 
     public void setNodeName(String nodeName) {
         this.nodeName = nodeName;
+    }
+
+    public void setFile(String file) {
+        this.file = file;
     }
 
     @Override
