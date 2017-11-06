@@ -12,12 +12,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -110,7 +105,8 @@ public class UDPCommunicationProvider extends CommunicationProvider {
     @SuppressWarnings("unchecked")
     @Override
     public Set<InetSocketAddress> searchFullFile(InetSocketAddress targetNode, String fileName, String keyword) {
-        String request = String.format(QUERY_MSG_FORMAT, keyword, fileName);
+        String msg = String.format(QUERY_MSG_FORMAT, keyword, fileName);
+        String request = RequestUtils.buildRequest(msg);
         logger.debug("Searching filename: {} , with keyword: {} in the network", fileName, keyword);
         String response = retryOrTimeout(request, targetNode);
         logger.debug("Received response: {}", response);
@@ -121,7 +117,7 @@ public class UDPCommunicationProvider extends CommunicationProvider {
             try (ObjectInputStream in = new ObjectInputStream(bais)) {
                 Object obj = in.readObject();
                 logger.debug("Received the Set of addresses that contains the file {}. {} - {}", fileName, obj.getClass(), obj);
-                return (HashSet<InetSocketAddress>) obj;
+                return new HashSet<InetSocketAddress>(Arrays.asList((InetSocketAddress[]) obj));
             } catch (Exception e) {
                 logger.error("Error occurred when obtaining routing table", e);
             }

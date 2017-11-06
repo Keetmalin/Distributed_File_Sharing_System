@@ -117,6 +117,6 @@ public class EntryTable {
     }
 
     public synchronized List<EntryTableEntry> getEntriesByKyeword(String key) {
-        return getKeywordsFor(key.charAt(0)).get(key);
+        return getKeywordsFor(Character.toUpperCase(key.charAt(0))).get(key);
     }
 }

@@ -31,7 +31,7 @@ mvn clean install assembly:single -DskipTests
 Step 3:
 
 Next, the make file will be available in the folder named "Target", or the original unzipped file set also contains a
-pre-built Make File. you can run which ever you prefer. Navigate to the folde that contains the Make File (JAR), and
+pre-built Make File. you can run which ever you prefer. Navigate to the folder that contains the Make File (JAR), and
 run the following command.
 
 (P.S : Before running this command, please ensure that the Bootstrap Server is running).

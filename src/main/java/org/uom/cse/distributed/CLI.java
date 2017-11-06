@@ -78,8 +78,11 @@ public class CLI {
                     case "myFiles":
                         System.out.println(node.getMyFiles());
                         break;
+                    case "entryTable":
+                        System.out.println(node.getEntryTable().getEntries());
+                        break;
                     case "help":
-                        System.out.println("stop | node | state | search | routingTable | myFiles");
+                        System.out.println("stop | node | state | search | routingTable | myFiles | entryTable");
                         break;
                     default:
                         System.out.println("Command not identified");

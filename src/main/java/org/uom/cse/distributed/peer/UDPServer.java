@@ -12,11 +12,7 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -129,16 +125,28 @@ public class UDPServer implements NodeServer {
                 retryOrTimeout(RESPONSE_OK, recipient);
                 break;
             case QUERY:
-                String[] parts = incomingResult[2].split(" ");
-                InetSocketAddress[] inetSocketAddresses = getNodeList(searchEntryTable(parts[0], parts[1]));
+                String[] parts = incomingResult[2].split(" ",2);
+                InetSocketAddress[] inetSocketAddresses = new InetSocketAddress[0];
+                inetSocketAddresses = getNodeListSafely(parts[0], parts[1]);
+
                 provideAddressArray(recipient, inetSocketAddresses);
+
                 break;
+
             case PING:
                 respondToPing(incomingResult[2], recipient);
                 break;
             case SYNC:
                 handleSyncRequest(incomingResult[2], recipient);
                 break;
+        }
+    }
+
+    InetSocketAddress[] getNodeListSafely(String keyword, String fileName) {
+        try {
+            return getNodeList(searchEntryTable(keyword, fileName));
+        } catch (Exception e) {
+            return new InetSocketAddress[0];
         }
     }
 
@@ -312,12 +320,12 @@ public class UDPServer implements NodeServer {
     }
 
     private List<String> searchEntryTable(String keyword, String fileName) {
-        char c = keyword.charAt(0);
+        char c = Character.toUpperCase(keyword.charAt(0));
         List<EntryTableEntry> entryList = this.node.getEntryTable().getEntries().get(c).get(keyword);
         List<String> results = new ArrayList<String>();
 
         for (EntryTableEntry entry : entryList) {
-            if (fileName.equals(entry.getFileName())) {
+            if (fileName.toLowerCase().equals(entry.getFileName().toLowerCase())) {
                 results.add(entry.getNodeName());
             }
         }
@@ -330,7 +338,7 @@ public class UDPServer implements NodeServer {
 
         int i = 0;
         for (RoutingTableEntry routingTableEntry : entries) {
-            if (nodeNameList.contains(routingTableEntry.getNodeId())) {
+            if (nodeNameList.contains(Integer.toString(routingTableEntry.getNodeId()))) {
                 inetSocketAddresses[i] = routingTableEntry.getAddress();
                 i++;
             }
