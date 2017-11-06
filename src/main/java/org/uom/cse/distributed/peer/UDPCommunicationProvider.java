@@ -44,12 +44,10 @@ public class UDPCommunicationProvider extends CommunicationProvider {
     private final int numOfRetries = RETRIES_COUNT;
     private ExecutorService executorService;
     private Node node;
-    private int queryHopCount;
 
     @Override
     public void start(Node node) {
         this.node = node;
-        this.queryHopCount = 1;
         executorService = Executors.newCachedThreadPool();
         logger.info("Communication provider started");
     }
@@ -112,7 +110,6 @@ public class UDPCommunicationProvider extends CommunicationProvider {
     @SuppressWarnings("unchecked")
     @Override
     public Set<InetSocketAddress> searchFullFile(InetSocketAddress targetNode, String fileName, String keyword) {
-        queryHopCount = 1;
         String request = String.format(QUERY_MSG_FORMAT, keyword, fileName);
         logger.debug("Searching filename: {} , with keyword: {} in the network", fileName, keyword);
         String response = retryOrTimeout(request, targetNode);
@@ -162,10 +159,6 @@ public class UDPCommunicationProvider extends CommunicationProvider {
         return null;
     }
 
-    @Override
-    public int getQueryHopCount() {
-        return queryHopCount;
-    }
 
     /**
      * @see #retryOrTimeout(int, String, InetSocketAddress)
@@ -187,7 +180,6 @@ public class UDPCommunicationProvider extends CommunicationProvider {
         int retriesLeft = retries;
 
         while (retriesLeft > 0) {
-            this.queryHopCount = retries - retriesLeft + 1 ;
             Future<String> task = executorService.submit(() -> {
                 try (DatagramSocket datagramSocket = new DatagramSocket()) {
                     return RequestUtils.sendRequest(datagramSocket, request, peer.getAddress(), peer.getPort());

@@ -105,7 +105,7 @@ public class RoutingTable {
     }
 
     /**
-     * Finds the routing table entry corresponding to the nodeId. The entry can be the exact node of the successor of
+     * Finds the routing table entry corresponding to the nodeId. The entry can be the exact node or the successor of
      * that node.
      *
      * @param nodeId Node name to be found in the routing table

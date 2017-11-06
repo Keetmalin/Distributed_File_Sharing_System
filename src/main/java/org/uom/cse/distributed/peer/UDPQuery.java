@@ -46,13 +46,29 @@ public class UDPQuery implements QueryInterface {
 
         Stream.of(keywords).forEach(keyword -> {
             int nodeId = HashUtils.keywordToNodeId(keyword);
+
             Optional<RoutingTableEntry> entry = this.node.getRoutingTable().findNodeOrSuccessor(nodeId);
+            Optional<RoutingTableEntry> entrySuccessor1 = this.node.getRoutingTable().findSuccessorOf(nodeId);
+            Optional<RoutingTableEntry> entrySuccessor2 = this.node.getRoutingTable().findSuccessorOf(entrySuccessor1.get().getNodeId());
+
 
             // the entry should be a different node (not itself)
             if (entry.isPresent() && entry.get().getNodeId() != node.getNodeId()) {
-                hopCount = this.node.getCommunicationProvider().getQueryHopCount();
                 logger.debug("searching for the node in Node {}", entry.get().getNodeId());
                 inetSocketAddresses = this.node.getCommunicationProvider().searchFullFile(entry.get().getAddress(), fileName, keyword);
+                hopCount++;
+                //this will check whether the returned result is empty, then check in successor
+                if (inetSocketAddresses.size() == 0){
+                    if (!entry.equals(entrySuccessor1)){
+                        inetSocketAddresses = this.node.getCommunicationProvider().searchFullFile(entrySuccessor1.get().getAddress(), fileName, keyword);
+                        hopCount++;
+                    }
+                }
+                //this will check whether the returned result is empty, then check in next successor
+                else if (inetSocketAddresses.size() == 0){
+                    inetSocketAddresses = this.node.getCommunicationProvider().searchFullFile(entrySuccessor2.get().getAddress(), fileName, keyword);
+                    hopCount++;
+                }
             } else {
                 logger.debug("Entry is not present");
             }

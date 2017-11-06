@@ -175,11 +175,6 @@ public class RestCommunicationProvider extends CommunicationProvider {
         return null;
     }
 
-    @Override
-    public int getQueryHopCount() {
-        return 0;
-    }
-
     private ClientResponse getResponse(String url) {
         Client client = Client.create();
         WebResource webResource = client
