@@ -36,35 +36,11 @@ public class RestCommunicationProvider extends CommunicationProvider {
         this.node = node;
         //this.queryHopCount = 1;
         logger.info("Communication provider started");
-
     }
 
     @Override
-    public void stop() {
+    public void stop() { }
 
-    }
-
-    //    @Override
-    //    public Set<RoutingTableEntry> connect(InetSocketAddress peer) {
-    //        String ipAddress = peer.getHostName();
-    //        int port = peer.getPort();
-    //        String stringURL = "http://" + ipAddress + ":" + String.valueOf(port) + "/getRoutingTable";
-    //        HashSet<RoutingTableEntry> set = new HashSet<>();
-    //        javax.ws.rs.client.Client client = JerseyClientBuilder.createClient();
-    //        try {
-    //            ClientResponse response = getResponse(stringURL);
-    //            if (response != null) {
-    //                Gson gson = new Gson();
-    //                Type type = new TypeToken<HashSet<RoutingTableEntry>>() {
-    //                }.getType();
-    //                set = gson.fromJson(getStringResponse(response), type);
-    //            }
-    //
-    //        } catch (Exception e) {
-    //            LOGGER.error("Error occurred when obtaining routing table", e);
-    //        }
-    //        return set;
-    //    }
     @Override
     public Set<RoutingTableEntry> connect(InetSocketAddress peer) {
         UriBuilder url = UriBuilder.fromPath("getRoutingTable")
@@ -82,7 +58,6 @@ public class RestCommunicationProvider extends CommunicationProvider {
         } finally {
             client.close();
         }
-
         return new HashSet<>();
     }
 
@@ -172,3 +147,27 @@ public class RestCommunicationProvider extends CommunicationProvider {
         return null;
     }
 }
+
+
+//    @Override
+//    public Set<RoutingTableEntry> connect(InetSocketAddress peer) {
+//        String ipAddress = peer.getHostName();
+//        int port = peer.getPort();
+//        String stringURL = "http://" + ipAddress + ":" + String.valueOf(port) + "/getRoutingTable";
+//        HashSet<RoutingTableEntry> set = new HashSet<>();
+//        javax.ws.rs.client.Client client = JerseyClientBuilder.createClient();
+//        try {
+//            ClientResponse response = getResponse(stringURL);
+//            if (response != null) {
+//                Gson gson = new Gson();
+//                Type type = new TypeToken<HashSet<RoutingTableEntry>>() {
+//                }.getType();
+//                set = gson.fromJson(getStringResponse(response), type);
+//            }
+//
+//        } catch (Exception e) {
+//            LOGGER.error("Error occurred when obtaining routing table", e);
+//        }
+//        return set;
+//    }
+

@@ -3,6 +3,7 @@ package org.uom.cse.distributed.peer.rest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.uom.cse.distributed.peer.Node;
+import org.uom.cse.distributed.peer.UDPCommunicationProvider;
 import org.uom.cse.distributed.peer.api.EntryTableEntry;
 
 import javax.ws.rs.Consumes;
@@ -13,8 +14,12 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
+import static org.uom.cse.distributed.Constants.*;
 
 @Path("/")
 @Consumes(MediaType.APPLICATION_JSON)
@@ -23,6 +28,7 @@ public class NodeController {
 
     private static final Logger logger = LoggerFactory.getLogger(NodeController.class);
     private Node node;
+    private final int numOfRetries = RETRIES_COUNT;
 
     public NodeController(Node node) {
         this.node = node;
@@ -30,7 +36,7 @@ public class NodeController {
 
     @GET
     @Path("/getRoutingTable")
-    public Response RouteTable() {
+    public Response routeTable() {
         try {
             return Response.ok(node.getRoutingTable().getEntries()).build();
         } catch (Exception e) {
@@ -41,7 +47,7 @@ public class NodeController {
 
     @GET
     @Path("/NotifyNewNode/{ip}/{port}/{id}")
-    public Response NewNode(@PathParam("ip") String ip, @PathParam("port") int port, @PathParam("id") int id) {
+    public Response newNode(@PathParam("ip") String ip, @PathParam("port") int port, @PathParam("id") int id) {
         try {
             node.addNewNode(ip, port, id);
             Map<Character, Map<String, List<EntryTableEntry>>> entriesToHandover = this.node.getEntriesToHandoverTo(id);
@@ -62,7 +68,7 @@ public class NodeController {
 
     @POST
     @Path("/NewEntry/{keyWord}")
-    public Response NewEntry(EntryTableEntry entry, @PathParam("keyWord") String key) {
+    public Response newEntry(EntryTableEntry entry, @PathParam("keyWord") String key) {
         node.getEntryTable().addEntry(key, entry);
         return Response.status(200).build();
     }
@@ -70,7 +76,59 @@ public class NodeController {
 
     @GET
     @Path("/Query/{keyWord}")
-    public Response Query(@PathParam("keyWord") String key) {
+    public Response query(@PathParam("keyWord") String key) {
         return Response.ok(node.getEntryTable().getEntriesByKyeword(key)).build();
+    }
+
+    @GET
+    @Path("/Ping/{id}")
+    public Response ping(Map<Character, Map<String, List<EntryTableEntry>>> toBeHandedOver, @PathParam("id") int id) {
+
+        Map<Character, Map<String, List<EntryTableEntry>>> toBeTakenOver;
+        logger.info("Received characters to be taken over -> {}", toBeHandedOver);
+
+        if (toBeHandedOver != null) {
+            toBeTakenOver = toBeHandedOver;
+            this.node.takeOverEntries(toBeTakenOver);
+        }
+        int nodeId = id;
+
+        // TODO: NEED to complete
+        // 1. Send my entries to this node
+        return Response.ok(node.getEntryTable().getEntries()).build();
+
+        // TODO: 11/2/17 Add the calling node to my routing table if not present
+
+//        // 2. Also send any characters to be taken over to this one as well. If present
+//        Optional<RoutingTableEntry> tableEntryOptional = this.node.getRoutingTable().findByNodeId(nodeId);
+//        if (tableEntryOptional.isPresent()) {
+//            handoverEntries(nodeId, tableEntryOptional.get().getAddress());
+//
+//            // 3. Send my routing table to that node as well
+//            provideRoutingTable(tableEntryOptional.get().getAddress());
+//        }
+//
+//        return Response.ok().build();
+
+    }
+
+    @GET
+    @Path("/Sync/{type}")
+    public Response sync(Map<Character, Map<String, List<EntryTableEntry>>> obj, @PathParam("type") String type) {
+        switch (type) {
+            case TYPE_ENTRIES:
+                logger.debug("Received characters to be taken over -> {}", obj);
+                if (obj != null) {
+                    Map<Character, Map<String, List<EntryTableEntry>>> toBeTakenOver = obj;
+                    this.node.takeOverEntries(toBeTakenOver);
+                }
+                break;
+            case TYPE_ROUTING:
+                logger.debug("Received routing table -> {}", obj);
+                break;
+        }
+
+        // retryOrTimeout(RESPONSE_OK, recipient);
+        return Response.ok().build();
     }
 }
