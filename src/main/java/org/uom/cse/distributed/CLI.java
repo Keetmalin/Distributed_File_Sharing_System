@@ -8,8 +8,6 @@ import org.kohsuke.args4j.Option;
 import org.uom.cse.distributed.peer.Node;
 import org.uom.cse.distributed.peer.UDPCommunicationProvider;
 import org.uom.cse.distributed.peer.UDPServer;
-import org.uom.cse.distributed.peer.rest.RestCommunicationProvider;
-import org.uom.cse.distributed.peer.rest.RestNodeServer;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -42,7 +40,7 @@ public class CLI {
         Node node;
         try {
             node = new Node(options.getPort(), options.getIpAddress(), options.getUsername(),
-                    new RestCommunicationProvider(), new RestNodeServer());
+                    new UDPCommunicationProvider(), new UDPServer(options.getPort()));
             node.start();
             System.out.println("Node started ...");
             Runtime.getRuntime().addShutdownHook(new Thread(node::stop));
