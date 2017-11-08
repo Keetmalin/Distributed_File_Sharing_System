@@ -12,7 +12,11 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -125,7 +129,7 @@ public class UDPServer implements NodeServer {
                 retryOrTimeout(RESPONSE_OK, recipient);
                 break;
             case QUERY:
-                String[] parts = incomingResult[2].split(" ",2);
+                String[] parts = incomingResult[2].split(" ", 2);
                 InetSocketAddress[] inetSocketAddresses = new InetSocketAddress[0];
                 inetSocketAddresses = getNodeListSafely(parts[0], parts[1]);
 
@@ -283,7 +287,7 @@ public class UDPServer implements NodeServer {
      */
     private boolean retryOrTimeout(String response, InetSocketAddress peer) {
         int retriesLeft = numOfRetries;
-        while (retriesLeft > 0) {
+        while (retriesLeft > 0 && started) {
             Future<Void> task = executorService.submit(() -> {
                 try (DatagramSocket datagramSocket = new DatagramSocket()) {
                     RequestUtils.sendResponse(datagramSocket, response, peer.getAddress(), peer.getPort());
@@ -351,6 +355,12 @@ public class UDPServer implements NodeServer {
         if (started) {
             started = false;
             executorService.shutdownNow();
+            try {
+                executorService.awaitTermination(GRACE_PERIOD_MS, TimeUnit.MILLISECONDS);
+            } catch (InterruptedException e) {
+                executorService.shutdownNow();
+            }
+            logger.info("Server stopped");
         }
     }
 }

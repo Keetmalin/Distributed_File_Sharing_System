@@ -15,7 +15,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
 import java.util.List;
-import java.util.Random;
 
 import static org.uom.cse.distributed.Constants.BOOTSTRAP_IP;
 import static org.uom.cse.distributed.Constants.BOOTSTRAP_PORT;
@@ -31,18 +30,9 @@ public class UDPBootstrapProvider implements BootstrapProvider {
 
     private static final Logger logger = LoggerFactory.getLogger(UDPBootstrapProvider.class);
 
-    private final int udpPort;
     private final int numOfRetries = RETRIES_COUNT;
 
-
-    public UDPBootstrapProvider() {
-        this(10000 + new Random().nextInt(55536));
-    }
-
-    public UDPBootstrapProvider(int udpPort) {
-        this.udpPort = udpPort;
-    }
-
+    public UDPBootstrapProvider() { }
 
     /** {@inheritDoc} */
     @Override
@@ -52,7 +42,7 @@ public class UDPBootstrapProvider implements BootstrapProvider {
 
         int retriesLeft = numOfRetries;
         while (retriesLeft > 0) {
-            try (DatagramSocket datagramSocket = createDatagramSocket()) {
+            try (DatagramSocket datagramSocket = new DatagramSocket()) {
                 String response = RequestUtils.sendRequest(datagramSocket, request, InetAddress.getByName(BOOTSTRAP_IP),
                         BOOTSTRAP_PORT);
                 logger.debug("Response received : {}", response);
@@ -66,11 +56,6 @@ public class UDPBootstrapProvider implements BootstrapProvider {
         return null;
     }
 
-    private DatagramSocket createDatagramSocket() throws SocketException {
-        logger.debug("Creating Datagram Socket at port : {}", udpPort);
-        return new DatagramSocket(udpPort);
-    }
-
     /** {@inheritDoc} */
     @Override
     public boolean unregister(String ipAddress, int port, String username) throws SocketException {
@@ -81,7 +66,7 @@ public class UDPBootstrapProvider implements BootstrapProvider {
 
         int retriesLeft = numOfRetries;
         while (retriesLeft > 0) {
-            try (DatagramSocket datagramSocket = createDatagramSocket()) {
+            try (DatagramSocket datagramSocket = new DatagramSocket()) {
                 String response = RequestUtils.sendRequest(datagramSocket, request,
                         InetAddress.getByName(Constants.BOOTSTRAP_IP), Constants.BOOTSTRAP_PORT);
                 logger.debug("Response received : {}", response);

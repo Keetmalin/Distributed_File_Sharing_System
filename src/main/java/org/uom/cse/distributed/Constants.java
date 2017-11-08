@@ -16,6 +16,7 @@ public class Constants {
     public static final int RETRY_TIMEOUT_MS = 5000;
     public static final int GRACE_PERIOD_MS = 5000;
     public static final int HEARTBEAT_FREQUENCY_MS = 20000;
+    public static final int HEARTBEAT_INITIAL_DELAY = 30000;
 
     public static final int ADDRESS_SPACE_SIZE = 36;
     public static final int CHARACTER_SPACE_SIZE = 36;

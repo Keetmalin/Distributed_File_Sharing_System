@@ -79,7 +79,26 @@ public class CLI {
                         System.out.println(node.getMyFiles());
                         break;
                     case "entryTable":
-                        System.out.println(node.getEntryTable().getEntries());
+                        StringBuilder sb = new StringBuilder();
+                        node.getEntryTable().getEntries().forEach(((character, stringListMap) -> {
+                            sb.append("\n");
+                            sb.append(character);
+                            sb.append("\t-> ");
+                            if (stringListMap.size() > 0) {
+                                sb.append("\n");
+                            }
+
+                            stringListMap.forEach((keyword, entries) -> {
+                                if (entries.size() > 0) {
+                                    sb.append("\t");
+                                    sb.append(keyword);
+                                    sb.append("\t-> ");
+                                    sb.append(entries);
+                                    sb.append("\n");
+                                }
+                            });
+                        }));
+                        System.out.println(sb.toString());
                         break;
                     case "help":
                         System.out.println("stop | node | state | search | routingTable | myFiles | entryTable");
@@ -90,9 +109,9 @@ public class CLI {
             } catch (Exception e) {
                 System.err.println("Error occurred: " + e.getMessage());
             }
-
-            System.out.println("\nDone!\n\n");
         }
+
+        System.out.println("Stopping CLI ...");
     }
 
     private static class CmdLineOptions {

@@ -10,6 +10,7 @@ import java.net.InetSocketAddress;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -19,6 +20,7 @@ import static org.uom.cse.distributed.Constants.ADDRESS_SPACE_SIZE;
 import static org.uom.cse.distributed.Constants.FILE_NAME_ARRAY;
 import static org.uom.cse.distributed.Constants.GRACE_PERIOD_MS;
 import static org.uom.cse.distributed.Constants.HEARTBEAT_FREQUENCY_MS;
+import static org.uom.cse.distributed.Constants.HEARTBEAT_INITIAL_DELAY;
 import static org.uom.cse.distributed.Constants.MAX_FILE_COUNT;
 import static org.uom.cse.distributed.Constants.MIN_FILE_COUNT;
 import static org.uom.cse.distributed.peer.api.State.CONFIGURED;
@@ -53,6 +55,7 @@ public class Node implements RoutingTableListener {
     private int nodeId;
     private char myChar;
     private ScheduledExecutorService executorService;
+    private ScheduledFuture<?> periodicTask;
 
     private BootstrapProvider bootstrapProvider = new UDPBootstrapProvider();
 
@@ -127,9 +130,14 @@ public class Node implements RoutingTableListener {
         /*
          * 1. Find 2 predecessors of mine.
          * 2. Then periodically ping them and synchronize with their entry tables.
-         * 3. If any predecessor has gone down, notify all that my predecessor has gone down.
          */
-        executorService.schedule(this::runPeriodically, HEARTBEAT_FREQUENCY_MS, TimeUnit.MILLISECONDS);
+        periodicTask = executorService.scheduleAtFixedRate(() -> {
+            try {
+                runPeriodically();
+            } catch (Exception e) {
+                logger.error("Error occurred when running periodic check", e);
+            }
+        }, HEARTBEAT_INITIAL_DELAY, HEARTBEAT_FREQUENCY_MS, TimeUnit.MILLISECONDS);
     }
 
     private void configure() {
@@ -458,10 +466,16 @@ public class Node implements RoutingTableListener {
         communicationProvider.stop();
         server.stop();
         routingTable.removeListener(this);
+
+        logger.debug("Shutting down periodic tasks");
+        periodicTask.cancel(true);
         executorService.shutdownNow();
         try {
             executorService.awaitTermination(GRACE_PERIOD_MS, TimeUnit.MILLISECONDS);
-        } catch (InterruptedException ignored) { }
+        } catch (InterruptedException e) {
+            executorService.shutdownNow();
+        }
+
         stateManager.setState(IDLE);
         logger.info("Distributed node stopped");
     }

@@ -12,13 +12,20 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import static org.uom.cse.distributed.Constants.GET_ROUTING_TABLE;
+import static org.uom.cse.distributed.Constants.GRACE_PERIOD_MS;
 import static org.uom.cse.distributed.Constants.NEWENTRY_MSG_FORMAT;
 import static org.uom.cse.distributed.Constants.NEWNODE_MSG_FORMAT;
 import static org.uom.cse.distributed.Constants.PING_MSG_FORMAT;
@@ -37,6 +44,7 @@ public class UDPCommunicationProvider extends CommunicationProvider {
 
     private static final Logger logger = LoggerFactory.getLogger(Node.class);
     private final int numOfRetries = RETRIES_COUNT;
+    private boolean started = false;
     private ExecutorService executorService;
     private Node node;
 
@@ -44,6 +52,7 @@ public class UDPCommunicationProvider extends CommunicationProvider {
     public void start(Node node) {
         this.node = node;
         executorService = Executors.newCachedThreadPool();
+        started = true;
         logger.info("Communication provider started");
     }
 
@@ -175,7 +184,7 @@ public class UDPCommunicationProvider extends CommunicationProvider {
     private String retryOrTimeout(int retries, String request, InetSocketAddress peer) {
         int retriesLeft = retries;
 
-        while (retriesLeft > 0) {
+        while (retriesLeft > 0 && started) {
             Future<String> task = executorService.submit(() -> {
                 try (DatagramSocket datagramSocket = new DatagramSocket()) {
                     return RequestUtils.sendRequest(datagramSocket, request, peer.getAddress(), peer.getPort());
@@ -204,8 +213,16 @@ public class UDPCommunicationProvider extends CommunicationProvider {
     public void stop() {
         if (executorService != null) {
             executorService.shutdownNow();
+            try {
+                executorService.awaitTermination(GRACE_PERIOD_MS, TimeUnit.MILLISECONDS);
+            } catch (InterruptedException e) {
+                executorService.shutdownNow();
+            }
+
             executorService = null;
         }
+
+        started = false;
         logger.info("Communication provider stopped");
     }
 
