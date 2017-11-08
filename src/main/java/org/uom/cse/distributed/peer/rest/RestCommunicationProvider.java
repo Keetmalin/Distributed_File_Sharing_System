@@ -142,6 +142,11 @@ public class RestCommunicationProvider extends CommunicationProvider {
     }
 
     @Override
+    public Set<String> searchKeywordFile(InetSocketAddress targetNode, String keyword) {
+        return null;
+    }
+
+    @Override
     public Map<Character, Map<String, List<EntryTableEntry>>> ping(InetSocketAddress peer,
             Map<Character, Map<String, List<EntryTableEntry>>> toBeHandedOver) {
         return null;

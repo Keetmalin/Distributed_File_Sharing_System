@@ -70,6 +70,8 @@ public abstract class CommunicationProvider {
      */
     public abstract Set<InetSocketAddress> searchFullFile(InetSocketAddress targetNode, String fileName, String keyword);
 
+    public abstract Set<String> searchKeywordFile(InetSocketAddress targetNode,String keyword);
+
     /**
      * Pings the given node and returns the {@link EntryTable#entries} of that node.
      *

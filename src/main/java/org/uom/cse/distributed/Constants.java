@@ -32,6 +32,8 @@ public class Constants {
     public static final String NEWENTRY_MSG_FORMAT = "NEWENTRY %s %d %s";
     /** QUERY ${keyword} ${filename} */
     public static final String QUERY_MSG_FORMAT = "QUERY %s %s";
+    /** QUERY ${keyword} ${filename} */
+    public static final String KEYWORD_MSG_FORMAT = "KEYWORD %s";
     /** PING - Pings and gets the entries of the corresponding node */
     public static final String PING_MSG_FORMAT = "PING %d %s";
     /** SYNC ${type} ${serialized_object} - For syncing table entries and routing tables */
@@ -50,6 +52,7 @@ public class Constants {
     public static final String GET_ROUTING_TABLE = "GETRTBL";
     public static final String NEW_NODE = "NEWNODE";
     public static final String QUERY = "QUERY";
+    public static final String KEYWORD = "KEYWORD";
     public static final String NEW_ENTRY = "NEWENTRY";
     public static final String RESPONSE_OK = "OK";
     public static final String RESPONSE_FAILURE = "FAILED";

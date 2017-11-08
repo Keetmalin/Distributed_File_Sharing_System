@@ -12,11 +12,7 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -137,6 +133,15 @@ public class UDPServer implements NodeServer {
 
                 break;
 
+            case KEYWORD:
+                String keyword = incomingResult[2];
+                String[] results = new String[0];
+                results = searchEntryTableForKeyword(keyword);
+
+                provideAddressArray(recipient, results);
+
+                break;
+
             case PING:
                 respondToPing(incomingResult[2], recipient);
                 break;
@@ -152,6 +157,28 @@ public class UDPServer implements NodeServer {
         } catch (Exception e) {
             return new InetSocketAddress[0];
         }
+    }
+
+
+    private String[] searchEntryTableForKeyword(String keyword) {
+        char c = Character.toUpperCase(keyword.charAt(0));
+        List<EntryTableEntry> entryList = this.node.getEntryTable().getEntries().get(c).get(keyword);
+        String[] resultArray = new String[entryList.size()];
+
+        for (EntryTableEntry entry : entryList) {
+
+            int i = 0;
+            for (RoutingTableEntry routingTableEntry : this.node.getRoutingTable().getEntries()) {
+
+                if (entry.getNodeName().equals(Integer.toString(routingTableEntry.getNodeId()))){
+                    resultArray[i] = entry.getFileName() + ":" + this.node.getIpAddress() + ":" + this.node.getPort();
+                    i++;
+                    break;
+                }
+            }
+
+        }
+        return resultArray;
     }
 
     private void provideRoutingTable(InetSocketAddress recipient) throws IOException {
@@ -309,11 +336,11 @@ public class UDPServer implements NodeServer {
     }
 
 
-    private void provideAddressArray(InetSocketAddress recipient, InetSocketAddress[] inetSocketAddresses) throws IOException {
-        logger.debug("Returning addresses {} to -> {}", inetSocketAddresses, recipient);
+    private void provideAddressArray(InetSocketAddress recipient, Object[] objects) throws IOException {
+        logger.debug("Returning addresses {} to -> {}", objects, recipient);
         String response;
         try {
-            response = RequestUtils.buildObjectRequest(inetSocketAddresses);
+            response = RequestUtils.buildObjectRequest(objects);
         } catch (IOException e) {
             logger.error("Error occurred when building object request: {}", e);
             throw e;

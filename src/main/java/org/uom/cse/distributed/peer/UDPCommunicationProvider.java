@@ -24,15 +24,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import static org.uom.cse.distributed.Constants.GET_ROUTING_TABLE;
-import static org.uom.cse.distributed.Constants.GRACE_PERIOD_MS;
-import static org.uom.cse.distributed.Constants.NEWENTRY_MSG_FORMAT;
-import static org.uom.cse.distributed.Constants.NEWNODE_MSG_FORMAT;
-import static org.uom.cse.distributed.Constants.PING_MSG_FORMAT;
-import static org.uom.cse.distributed.Constants.QUERY_MSG_FORMAT;
-import static org.uom.cse.distributed.Constants.RESPONSE_FAILURE;
-import static org.uom.cse.distributed.Constants.RETRIES_COUNT;
-import static org.uom.cse.distributed.Constants.RETRY_TIMEOUT_MS;
+import static org.uom.cse.distributed.Constants.*;
 
 /**
  * Provides UDP Socket Based communication with Peers
@@ -127,6 +119,29 @@ public class UDPCommunicationProvider extends CommunicationProvider {
                 Object obj = in.readObject();
                 logger.debug("Received the Set of addresses that contains the file {}. {} - {}", fileName, obj.getClass(), obj);
                 return new HashSet<InetSocketAddress>(Arrays.asList((InetSocketAddress[]) obj));
+            } catch (Exception e) {
+                logger.error("Error occurred when obtaining routing table", e);
+            }
+        }
+
+        // If failed we return an empty set to not to break operations.
+        return new HashSet<>();
+    }
+
+    @Override
+    public Set<String> searchKeywordFile(InetSocketAddress targetNode, String keyword) {
+
+        String msg = String.format(KEYWORD_MSG_FORMAT, keyword);
+        String request = RequestUtils.buildRequest(msg);
+        String response = retryOrTimeout(request, targetNode);
+        logger.debug("Received response: {}", response);
+
+        if (response != null) {
+            byte[] received = Base64.getDecoder().decode(response);
+            ByteArrayInputStream bais = new ByteArrayInputStream(received);
+            try (ObjectInputStream in = new ObjectInputStream(bais)) {
+                Object obj = in.readObject();
+                return new HashSet<String>(Arrays.asList((String[]) obj));
             } catch (Exception e) {
                 logger.error("Error occurred when obtaining routing table", e);
             }

@@ -71,6 +71,9 @@ public class CLI {
                     case "search":
                         node.getUdpQuery().searchFullFile(parts[1]);
                         break;
+                    case "searchK":
+                        node.getUdpQuery().searchKeyword(parts[1]);
+                        break;
                     case "routingTable":
                         node.getRoutingTable().getEntries()
                                 .forEach(entry -> System.out.println(entry.getNodeId() + " -> " + entry.getAddress().toString()));
