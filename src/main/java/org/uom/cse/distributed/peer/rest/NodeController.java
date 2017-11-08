@@ -76,8 +76,16 @@ public class NodeController {
 
     @POST
     @Path("/NewEntry/{keyWord}")
-    public Response newEntry(EntryTableEntry entry, @PathParam("keyWord") String key) {
-        node.getEntryTable().addEntry(key, entry);
+    public Response newEntry(String base64, @PathParam("keyWord") String key) {
+        if (base64 != null) {
+            Object obj = RequestUtils.base64StringToObject(base64);
+            logger.debug("Received entry to take over -> {}", obj);
+            if (obj != null) {
+                EntryTableEntry entry = (EntryTableEntry) obj;
+                node.getEntryTable().addEntry(key, entry);
+                return Response.status(200).build();
+            }
+        }
         return Response.status(200).build();
     }
 
@@ -103,22 +111,32 @@ public class NodeController {
         }
     }
 
+    @SuppressWarnings("unchecked")
     @GET
     @Path("/Ping/{id}")
-    public Response ping(Map<Character, Map<String, List<EntryTableEntry>>> toBeHandedOver, @PathParam("id") int id) {
-
+    public Response ping(String base64, @PathParam("id") int id) {
         Map<Character, Map<String, List<EntryTableEntry>>> toBeTakenOver;
-        logger.info("Received characters to be taken over -> {}", toBeHandedOver);
+        logger.info("Received characters to be taken over -> {}", base64);
 
-        if (toBeHandedOver != null) {
-            toBeTakenOver = toBeHandedOver;
-            this.node.takeOverEntries(toBeTakenOver);
+        if (base64 != null) {
+            Object obj = RequestUtils.base64StringToObject(base64);
+            logger.debug("Received entry to take over -> {}", obj);
+            if (obj != null) {
+                toBeTakenOver = (Map<Character, Map<String, List<EntryTableEntry>>>) obj;
+                this.node.takeOverEntries(toBeTakenOver);
+            }
         }
+
         int nodeId = id;
 
         // TODO: NEED to complete
         // 1. Send my entries to this node
-        return Response.ok(node.getEntryTable().getEntries()).build();
+        try {
+            return Response.ok(RequestUtils.buildObjectRequest(node.getEntryTable().getEntries())).build();
+        } catch (IOException e) {
+            logger.error("Error occurred when responding to ping: {}", e);
+            return Response.serverError().build();
+        }
 
         // TODO: 11/2/17 Add the calling node to my routing table if not present
 
@@ -132,7 +150,6 @@ public class NodeController {
         //        }
         //
         //        return Response.ok().build();
-
     }
 
     @GET

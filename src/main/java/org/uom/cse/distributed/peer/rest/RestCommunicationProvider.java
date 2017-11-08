@@ -13,6 +13,7 @@ import javax.ws.rs.client.Client;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.UriBuilder;
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.List;
@@ -90,10 +91,10 @@ public class RestCommunicationProvider extends CommunicationProvider {
             logger.debug("Offering file to {} as message: {}", peer, url);
             client.target(url)
                     .request(MediaType.APPLICATION_JSON)
-                    .post(Entity.json(entry));
+                    .post(Entity.json(RequestUtils.buildObjectRequest(entry)));
             return true;
         } catch (Exception e) {
-            logger.error("Error occurred when notifying new node to -> {} with message : {}", url, e);
+            logger.error("Error occurred when offering keyword -> {} to -> {} with message : {}", keyword, url, e);
         } finally {
             client.close();
         }
@@ -142,6 +143,40 @@ public class RestCommunicationProvider extends CommunicationProvider {
     @Override
     public Map<Character, Map<String, List<EntryTableEntry>>> ping(InetSocketAddress peer,
             Map<Character, Map<String, List<EntryTableEntry>>> toBeHandedOver) {
+        String base64 = null;
+        try {
+            base64 = RequestUtils.buildObjectRequest(toBeHandedOver);
+        } catch (IOException e) {
+            logger.error("Error occurred when encoding entries to be handed over to -> {}", peer, e);
+            throw new IllegalArgumentException("Unable to encode entries", e);
+        }
+
+        UriBuilder url = UriBuilder.fromPath("Ping")
+                .path(String.valueOf(this.node.getNodeId()))
+                .scheme("http")
+                .host(peer.getAddress().getHostAddress())
+                .port(peer.getPort());
+
+        Client client = JerseyClientBuilder.createClient();
+        try {
+            logger.debug("Pinging {} at {}", peer, url);
+            String response = client.target(url)
+                    .request(MediaType.APPLICATION_JSON_TYPE)
+                    .get(String.class);
+            logger.debug("Received response : {}", response);
+            if (response != null) {
+                Object obj = RequestUtils.base64StringToObject(response);
+                logger.debug("Received entries to take over -> {}", obj);
+                if (obj != null) {
+                    return (Map<Character, Map<String, List<EntryTableEntry>>>) obj;
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Error occurred when connecting to -> {} with message : {}", url, e);
+        } finally {
+            client.close();
+        }
+
         return null;
     }
 
