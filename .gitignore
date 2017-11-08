@@ -1,0 +1,6 @@
+.gitignore
+.idea/
+file-sharer.iml
+target/
+classes/
+src/main/java/META-INF/
