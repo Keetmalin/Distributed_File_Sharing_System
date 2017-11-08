@@ -1,6 +1,5 @@
 package org.uom.cse.distributed.peer.rest;
 
-
 import org.glassfish.jersey.client.JerseyClientBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -8,20 +7,17 @@ import org.uom.cse.distributed.peer.Node;
 import org.uom.cse.distributed.peer.api.CommunicationProvider;
 import org.uom.cse.distributed.peer.api.EntryTableEntry;
 import org.uom.cse.distributed.peer.api.RoutingTableEntry;
+import org.uom.cse.distributed.peer.utils.RequestUtils;
 
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.Entity;
-import javax.ws.rs.core.GenericType;
 import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 import java.net.InetSocketAddress;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 
 /**
  * Created by Vithusha on 10/24/2017.
@@ -42,31 +38,12 @@ public class RestCommunicationProvider extends CommunicationProvider {
     @Override
     public void stop() { }
 
-   /* @Override
-    public Set<RoutingTableEntry> connect(InetSocketAddress peer) {
-        UriBuilder url = UriBuilder.fromPath("getRoutingTable")
-                .scheme("http")
-                .host(peer.getAddress().getHostAddress())
-                .port(peer.getPort());
-
-        Client client = JerseyClientBuilder.createClient();
-        try {
-            return client.target(url)
-                    .request(MediaType.APPLICATION_JSON)
-                    .get(new GenericType<Set<RoutingTableEntry>>() {});
-        } catch (Exception e) {
-            logger.error("error occurred when connecting {} : {}", url, e);
-        } finally {
-            client.close();
-        }
-        return new HashSet<>();
-    }*/
-
     @Override
     public boolean disconnect(InetSocketAddress peer) {
         return false;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public Map<Character, Map<String, List<EntryTableEntry>>> notifyNewNode(InetSocketAddress peer, InetSocketAddress me, int nodeId) {
         UriBuilder url = UriBuilder.fromPath("NotifyNewNode")
@@ -80,9 +57,16 @@ public class RestCommunicationProvider extends CommunicationProvider {
         Client client = JerseyClientBuilder.createClient();
         try {
             logger.debug("Notifying new node to {} as message: {}", peer, url);
-            return client.target(url)
+            String response = client.target(url)
                     .request(MediaType.APPLICATION_JSON)
-                    .get(new GenericType<Map<Character, Map<String, List<EntryTableEntry>>>>() {});
+                    .get(String.class);
+            if (response != null) {
+                Object obj = RequestUtils.base64StringToObject(response);
+                logger.debug("Received entries to take over -> {}", obj);
+                if (obj != null) {
+                    return (Map<Character, Map<String, List<EntryTableEntry>>>) obj;
+                }
+            }
         } catch (Exception e) {
             logger.error("Error occurred when notifying new node to -> {} with message : {}", url, e);
         } finally {
@@ -117,6 +101,7 @@ public class RestCommunicationProvider extends CommunicationProvider {
         return false;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public Set<InetSocketAddress> searchFullFile(InetSocketAddress targetNode, String fileName, String keyword) {
         UriBuilder url = UriBuilder.fromPath("Query")
@@ -128,11 +113,18 @@ public class RestCommunicationProvider extends CommunicationProvider {
         Client client = JerseyClientBuilder.createClient();
         try {
             logger.debug("Querying keyword {} in {}", keyword, url);
-            List<EntryTableEntry> entries = client.target(url)
+            String response = client.target(url)
                     .request(MediaType.APPLICATION_JSON)
-                    .get(new GenericType<List<EntryTableEntry>>() {});
+                    .get(String.class);
 
-            // TODO: 11/7/17 Should we return a set of InetSocketAddresses?
+            logger.debug("Received response : {}", response);
+            if (response != null) {
+                Object obj = RequestUtils.base64StringToObject(response);
+                logger.debug("Received entries for query {} -> {}", keyword, obj);
+                if (obj != null) {
+                    return (Set<InetSocketAddress>) obj;
+                }
+            }
         } catch (Exception e) {
             logger.error("Error occurred when notifying new node to -> {} with message : {}", url, e);
         } finally {
@@ -153,44 +145,34 @@ public class RestCommunicationProvider extends CommunicationProvider {
         return null;
     }
 
-
-
-//    @Override
-//    public Set<RoutingTableEntry> connect(InetSocketAddress peer) {
-//        String ipAddress = peer.getHostName();
-//        int port = peer.getPort();
-//        String stringURL = "http://" + ipAddress + ":" + String.valueOf(port) + "/getRoutingTable";
-//        HashSet<RoutingTableEntry> set = new HashSet<>();
-//        javax.ws.rs.client.Client client = JerseyClientBuilder.createClient();
-//        try {
-//            ClientResponse response = getResponse(stringURL);
-//            if (response != null) {
-//                Gson gson = new Gson();
-//                Type type = new TypeToken<HashSet<RoutingTableEntry>>() {
-//                }.getType();
-//                set = gson.fromJson(getStringResponse(response), type);
-//            }
-//
-//        } catch (Exception e) {
-//            LOGGER.error("Error occurred when obtaining routing table", e);
-//        }
-//        return set;
-//    }
+    @SuppressWarnings("unchecked")
     @Override
     public Set<RoutingTableEntry> connect(InetSocketAddress peer) {
-        String ipAddress = peer.getHostName();
-        int port = peer.getPort();
-      String stringURL = "http://" + ipAddress + ":" + String.valueOf(port) + "/nodecontroller/getRoutingTable";
-//        UriBuilder stringURL = UriBuilder.fromPath("/*")
-//                .path("nodecontroller")
-//                .scheme("http")
-//                .path("getRoutingTable")
-//                .host("localhost")
-//                .port(8085);
-        javax.ws.rs.client.Client client = JerseyClientBuilder.createClient();
-        Response response = client.target(stringURL).request(MediaType.APPLICATION_JSON_TYPE).get();
-        Set<RoutingTableEntry> routingTableEntries = (Set<RoutingTableEntry>) client.target(stringURL).request(MediaType.APPLICATION_JSON_TYPE).get();
-        return routingTableEntries;
+        UriBuilder url = UriBuilder.fromPath("getRoutingTable")
+                .scheme("http")
+                .host(peer.getAddress().getHostAddress())
+                .port(peer.getPort());
+
+        Client client = JerseyClientBuilder.createClient();
+        try {
+            logger.debug("Connecting to {} at {}", peer, url);
+            String response = client.target(url)
+                    .request(MediaType.APPLICATION_JSON_TYPE)
+                    .get(String.class);
+            logger.debug("Received response : {}", response);
+            if (response != null) {
+                Object obj = RequestUtils.base64StringToObject(response);
+                logger.debug("Received routing table -> {}", obj);
+                if (obj != null) {
+                    return (Set<RoutingTableEntry>) obj;
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Error occurred when connecting to -> {} with message : {}", url, e);
+        } finally {
+            client.close();
+        }
+
+        return null;
     }
 }
-

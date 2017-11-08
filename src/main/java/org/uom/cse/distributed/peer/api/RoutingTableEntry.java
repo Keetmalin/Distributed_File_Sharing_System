@@ -3,12 +3,14 @@
  */
 package org.uom.cse.distributed.peer.api;
 
+import javax.xml.bind.annotation.XmlRootElement;
 import java.io.Serializable;
 import java.net.InetSocketAddress;
 
 /**
  * Represents an entry in the routing table. Consists of IP, port and Node name.
  */
+@XmlRootElement
 public class RoutingTableEntry implements Serializable {
 
     private InetSocketAddress address;

@@ -30,6 +30,7 @@ import java.util.UUID;
  * @author Keetmalin
  */
 public class NewJFrame extends javax.swing.JFrame {
+
     Node node;
     private String ipAdd = String.valueOf(InetAddress.getLocalHost().getHostAddress());
     private int portNo = 32050;

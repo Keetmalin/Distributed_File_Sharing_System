@@ -1,5 +1,6 @@
 package org.uom.cse.distributed.peer.api;
 
+import javax.xml.bind.annotation.XmlRootElement;
 import java.io.Serializable;
 
 /**
@@ -7,6 +8,7 @@ import java.io.Serializable;
  *
  * @author Keet Sugathadasa
  */
+@XmlRootElement
 public class EntryTableEntry implements Serializable {
 
     private String file;

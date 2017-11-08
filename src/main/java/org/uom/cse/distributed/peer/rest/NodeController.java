@@ -3,8 +3,9 @@ package org.uom.cse.distributed.peer.rest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.uom.cse.distributed.peer.Node;
-import org.uom.cse.distributed.peer.UDPCommunicationProvider;
 import org.uom.cse.distributed.peer.api.EntryTableEntry;
+import org.uom.cse.distributed.peer.api.RoutingTableEntry;
+import org.uom.cse.distributed.peer.utils.RequestUtils;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -14,12 +15,16 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
+import java.util.Set;
+import java.util.stream.Collectors;
 
-import static org.uom.cse.distributed.Constants.*;
+import static org.uom.cse.distributed.Constants.RETRIES_COUNT;
+import static org.uom.cse.distributed.Constants.TYPE_ENTRIES;
+import static org.uom.cse.distributed.Constants.TYPE_ROUTING;
 
 @Path("/")
 @Consumes(MediaType.APPLICATION_JSON)
@@ -27,6 +32,7 @@ import static org.uom.cse.distributed.Constants.*;
 public class NodeController {
 
     private static final Logger logger = LoggerFactory.getLogger(NodeController.class);
+
     private Node node;
     private final int numOfRetries = RETRIES_COUNT;
 
@@ -38,7 +44,9 @@ public class NodeController {
     @Path("/getRoutingTable")
     public Response routeTable() {
         try {
-            return Response.ok(node.getRoutingTable().getEntries()).build();
+            Set<RoutingTableEntry> routingTable = node.getRoutingTable().getEntries();
+            logger.debug("Returning routing table: {}", routingTable);
+            return Response.ok(RequestUtils.buildObjectRequest(routingTable)).build();
         } catch (Exception e) {
             logger.error("Error occurred when building object request: {}", e);
             return Response.status(500).build();
@@ -59,7 +67,7 @@ public class NodeController {
             logger.debug("Notifying characters belonging to node -> {} : {}", id, entriesToHandover.keySet());
             //TODO : Imesha need to verify relevant client got the response
             node.removeEntries(entriesToHandover.keySet());
-            return Response.ok(entriesToHandover).build();
+            return Response.ok(RequestUtils.buildObjectRequest(entriesToHandover)).build();
         } catch (Exception e) {
             logger.error("Couldn't find characters to be handed over to node -> {}", id);
             return Response.status(500).build();
@@ -77,7 +85,22 @@ public class NodeController {
     @GET
     @Path("/Query/{keyWord}")
     public Response query(@PathParam("keyWord") String key) {
-        return Response.ok(node.getEntryTable().getEntriesByKyeword(key)).build();
+        try {
+            List<EntryTableEntry> entries = node.getEntryTable().getEntriesByKyeword(key);
+            Set<InetSocketAddress> addresses = entries.stream()
+                    .filter(entry -> node.getRoutingTable()
+                            .findByNodeId(Integer.parseInt(entry.getNodeName()))
+                            .isPresent())
+                    .map(entry -> node.getRoutingTable()
+                            .findByNodeId(Integer.parseInt(entry.getNodeName()))
+                            .get()
+                            .getAddress())
+                    .collect(Collectors.toSet());
+            return Response.ok(RequestUtils.buildObjectRequest(addresses)).build();
+        } catch (IOException e) {
+            logger.error("Error occurred when searching for keyword -> {} : {}", e);
+            return Response.serverError().build();
+        }
     }
 
     @GET
@@ -99,16 +122,16 @@ public class NodeController {
 
         // TODO: 11/2/17 Add the calling node to my routing table if not present
 
-//        // 2. Also send any characters to be taken over to this one as well. If present
-//        Optional<RoutingTableEntry> tableEntryOptional = this.node.getRoutingTable().findByNodeId(nodeId);
-//        if (tableEntryOptional.isPresent()) {
-//            handoverEntries(nodeId, tableEntryOptional.get().getAddress());
-//
-//            // 3. Send my routing table to that node as well
-//            provideRoutingTable(tableEntryOptional.get().getAddress());
-//        }
-//
-//        return Response.ok().build();
+        //        // 2. Also send any characters to be taken over to this one as well. If present
+        //        Optional<RoutingTableEntry> tableEntryOptional = this.node.getRoutingTable().findByNodeId(nodeId);
+        //        if (tableEntryOptional.isPresent()) {
+        //            handoverEntries(nodeId, tableEntryOptional.get().getAddress());
+        //
+        //            // 3. Send my routing table to that node as well
+        //            provideRoutingTable(tableEntryOptional.get().getAddress());
+        //        }
+        //
+        //        return Response.ok().build();
 
     }
 

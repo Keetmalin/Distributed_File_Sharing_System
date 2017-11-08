@@ -8,6 +8,8 @@ import org.kohsuke.args4j.Option;
 import org.uom.cse.distributed.peer.Node;
 import org.uom.cse.distributed.peer.UDPCommunicationProvider;
 import org.uom.cse.distributed.peer.UDPServer;
+import org.uom.cse.distributed.peer.api.CommunicationProvider;
+import org.uom.cse.distributed.peer.api.NodeServer;
 import org.uom.cse.distributed.peer.rest.RestCommunicationProvider;
 import org.uom.cse.distributed.peer.rest.RestNodeServer;
 
@@ -41,8 +43,17 @@ public class CLI {
 
         Node node;
         try {
-            node = new Node(options.getPort(), options.getIpAddress(), options.getUsername(),
-                    new RestCommunicationProvider(), new RestNodeServer());
+            CommunicationProvider cp;
+            NodeServer ns;
+            if (options.isRest()) {
+                cp = new RestCommunicationProvider();
+                ns = new RestNodeServer();
+            } else {
+                cp = new UDPCommunicationProvider();
+                ns = new UDPServer(options.getPort());
+            }
+
+            node = new Node(options.getPort(), options.getIpAddress(), options.getUsername(), cp, ns);
             node.start();
             System.out.println("Node started ...");
             Runtime.getRuntime().addShutdownHook(new Thread(node::stop));
@@ -136,8 +147,10 @@ public class CLI {
         @Option(name = "-username", usage = "Username of the node (default: A random UUID)")
         private String username = UUID.randomUUID().toString();
 
-        private CmdLineOptions() throws UnknownHostException {
-        }
+        @Option(name = "-rest", usage = "Use REST services over UDP sockets if this option is given")
+        private boolean isRest = false;
+
+        private CmdLineOptions() throws UnknownHostException { }
 
         public int getPort() {
             return port;
@@ -157,6 +170,10 @@ public class CLI {
 
         public int getBsPort() {
             return bsPort;
+        }
+
+        public boolean isRest() {
+            return isRest;
         }
     }
 }

@@ -2,7 +2,7 @@
 <Configuration>
     <Appenders>
         <Console name="Console">
-            <PatternLayout pattern="%d{HH:mm:ss.SSS} %-5level [%t] %C{1} - %msg%n"/>
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} %-5level %C{1} - %msg%n"/>
         </Console>
     </Appenders>
     <Loggers>
@@ -12,7 +12,7 @@
         <Logger name="org.hibernate" level="INFO">
             <AppenderRef ref="Console"/>
         </Logger>
-        <Root level="INFO">
+        <Root level="DEBUG">
             <AppenderRef ref="Console"/>
         </Root>
     </Loggers>
