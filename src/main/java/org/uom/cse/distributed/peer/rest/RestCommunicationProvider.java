@@ -13,6 +13,7 @@ import javax.ws.rs.client.Client;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.core.GenericType;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 import java.net.InetSocketAddress;
 import java.util.HashMap;
@@ -41,7 +42,7 @@ public class RestCommunicationProvider extends CommunicationProvider {
     @Override
     public void stop() { }
 
-    @Override
+   /* @Override
     public Set<RoutingTableEntry> connect(InetSocketAddress peer) {
         UriBuilder url = UriBuilder.fromPath("getRoutingTable")
                 .scheme("http")
@@ -59,7 +60,7 @@ public class RestCommunicationProvider extends CommunicationProvider {
             client.close();
         }
         return new HashSet<>();
-    }
+    }*/
 
     @Override
     public boolean disconnect(InetSocketAddress peer) {
@@ -151,7 +152,7 @@ public class RestCommunicationProvider extends CommunicationProvider {
             Map<Character, Map<String, List<EntryTableEntry>>> toBeHandedOver) {
         return null;
     }
-}
+
 
 
 //    @Override
@@ -175,4 +176,21 @@ public class RestCommunicationProvider extends CommunicationProvider {
 //        }
 //        return set;
 //    }
+    @Override
+    public Set<RoutingTableEntry> connect(InetSocketAddress peer) {
+        String ipAddress = peer.getHostName();
+        int port = peer.getPort();
+      String stringURL = "http://" + ipAddress + ":" + String.valueOf(port) + "/nodecontroller/getRoutingTable";
+//        UriBuilder stringURL = UriBuilder.fromPath("/*")
+//                .path("nodecontroller")
+//                .scheme("http")
+//                .path("getRoutingTable")
+//                .host("localhost")
+//                .port(8085);
+        javax.ws.rs.client.Client client = JerseyClientBuilder.createClient();
+        Response response = client.target(stringURL).request(MediaType.APPLICATION_JSON_TYPE).get();
+        Set<RoutingTableEntry> routingTableEntries = (Set<RoutingTableEntry>) client.target(stringURL).request(MediaType.APPLICATION_JSON_TYPE).get();
+        return routingTableEntries;
+    }
+}
 
