@@ -29,7 +29,6 @@ import static org.uom.cse.distributed.peer.api.State.CONFIGURED;
 import static org.uom.cse.distributed.peer.api.State.IDLE;
 
 public class RESTServerTest {
-
     private static final Logger logger = LoggerFactory.getLogger(RESTServerTest.class);
 
     private static final int NODE_COUNT = 2;

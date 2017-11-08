@@ -24,7 +24,7 @@ public class PerformanceTest {
 
     public static void main(String[] args) {
         SocketBasedPeerTest socketBasedPeerTest = new SocketBasedPeerTest();
-        socketBasedPeerTest.setUp();
+        socketBasedPeerTest.socketBasedSetUp();
 
         nodes = socketBasedPeerTest.getNodes();
 

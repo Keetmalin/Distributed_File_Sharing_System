@@ -11,8 +11,12 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.uom.cse.distributed.peer.Node;
+
 import org.uom.cse.distributed.peer.api.RoutingTable;
 import org.uom.cse.distributed.peer.api.RoutingTableEntry;
+import org.uom.cse.distributed.peer.rest.RestCommunicationProvider;
+
+import org.uom.cse.distributed.peer.rest.RestNodeServer;
 import org.uom.cse.distributed.peer.utils.HashUtils;
 import org.uom.cse.distributed.server.BootstrapServer;
 
@@ -46,13 +50,24 @@ public class SocketBasedPeerTest {
     private final List<Node> nodes = new ArrayList<>();
 
     @BeforeMethod
-    public void setUp() {
+    public void socketBasedSetUp() {
         bootstrapServer = new BootstrapServer(Constants.BOOTSTRAP_PORT);
         bootstrapServer.start();
 
         int port = 35002;
         for (int i = 0; i < NODE_COUNT; i++) {
             nodes.add(new Node(port + i));
+        }
+    }
+
+    @BeforeMethod
+    public void restBasedSetUp() {
+        bootstrapServer = new BootstrapServer(Constants.BOOTSTRAP_PORT);
+        bootstrapServer.start();
+
+        int port = 35002;
+        for (int i = 0; i < NODE_COUNT; i++) {
+            nodes.add(new Node(port + i, new RestCommunicationProvider(), new RestNodeServer()));
         }
     }
 
