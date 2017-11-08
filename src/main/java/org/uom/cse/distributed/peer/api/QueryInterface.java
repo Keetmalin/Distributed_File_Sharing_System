@@ -3,6 +3,7 @@ package org.uom.cse.distributed.peer.api;
 import org.uom.cse.distributed.peer.Node;
 
 import java.net.InetSocketAddress;
+import java.util.Set;
 
 /**
  * This interface will provide the necessary structure for the file querying system.
@@ -17,7 +18,7 @@ public interface QueryInterface {
      * @param fileName the file name that needs to be searched in the network
      * @return InetSocketAddress list of the nodes that contain the file
      */
-    public void searchFullFile(String fileName);
+    public Set<InetSocketAddress> searchFullFile(String fileName);
 
     /**
      * this method looks at the files in the the node itself and return the node file

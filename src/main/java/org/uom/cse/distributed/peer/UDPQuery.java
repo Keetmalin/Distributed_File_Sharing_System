@@ -33,14 +33,14 @@ public class UDPQuery implements QueryInterface {
     }
 
     @Override
-    public void searchFullFile(String fileName) {
+    public Set<InetSocketAddress> searchFullFile(String fileName) {
         inetSocketAddresses.clear();
         hopCount = 0;
         // 1. First look in the same node for the requested file name
         if (searchMyFilesFullName(fileName)) {
             logger.info("file name {} is available in your node itself", fileName);
             inetSocketAddresses.add(new InetSocketAddress(this.node.getIpAddress(), this.node.getPort()));
-            return;
+            return inetSocketAddresses;
         }
 
         String keywords[] = fileName.split(" ");
@@ -78,9 +78,10 @@ public class UDPQuery implements QueryInterface {
 
 
         logger.info("Search results -> {}", inetSocketAddresses);
+        return inetSocketAddresses;
     }
 
-    public void searchKeyword(String keyword) {
+    public Set<String> searchKeyword(String keyword) {
         queryResultSet.clear();
         hopCount = 0;
 //        // 1. First look in the same node for the requested file name
@@ -119,6 +120,7 @@ public class UDPQuery implements QueryInterface {
 
 
         logger.info("Search results -> {}", queryResultSet);
+        return queryResultSet;
 
     }
 
