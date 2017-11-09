@@ -112,7 +112,7 @@
                     <finalName>file-sharer</finalName>
                     <archive>
                         <manifest>
-                            <mainClass>org.uom.cse.distributed.CLI</mainClass>
+                            <mainClass>org.uom.cse.distributed.GUI.NewJFrame</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>
