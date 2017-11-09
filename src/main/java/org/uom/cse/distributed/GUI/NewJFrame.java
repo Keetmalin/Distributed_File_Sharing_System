@@ -580,6 +580,8 @@ public class NewJFrame extends javax.swing.JFrame {
     }
 
     private void searchButtonActionPerformed(java.awt.event.ActionEvent evt) {
+
+        loggerArea.setText("");
         // Search button
         Set<InetSocketAddress> set = null;
         Set<String> keySet =null;
