@@ -136,9 +136,37 @@ public class RestCommunicationProvider extends CommunicationProvider {
         return null;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public Set<String> searchKeywordFile(InetSocketAddress targetNode, String keyword) {
-        return null;
+        UriBuilder url = UriBuilder.fromPath("Keyword")
+                .path(keyword)
+                .scheme("http")
+                .host(targetNode.getAddress().getHostAddress())
+                .port(targetNode.getPort());
+
+        Client client = JerseyClientBuilder.createClient();
+        try {
+            logger.debug("Querying keyword {} in {}", keyword, url);
+            String response = client.target(url)
+                    .request(MediaType.APPLICATION_JSON)
+                    .get(String.class);
+
+            logger.debug("Received response : {}", response);
+            if (response != null) {
+                Object obj = RequestUtils.base64StringToObject(response);
+                logger.debug("Received entries for query {} -> {}", keyword, obj);
+                if (obj != null) {
+                    return (Set<String>) obj;
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Error occurred when notifying new node to -> {} with message : {}", url, e);
+        } finally {
+            client.close();
+        }
+
+        return  null;
     }
 
     @Override

@@ -601,7 +601,16 @@ public class NewJFrame extends javax.swing.JFrame {
                 }
             }
             else if(keywordRadio.isSelected()){
-                keySet = node.getUdpQuery().searchKeyword(fileName.getText());
+
+                if (radioUDP.isSelected()){
+                    keySet = node.getUdpQuery().searchKeyword(fileName.getText());
+                }
+                else {
+                    keySet = node.getRestQuery().searchKeyword(fileName.getText());
+                }
+
+
+
                 for(String file :keySet){
                     loggerArea.append(file + "\n");
                 }

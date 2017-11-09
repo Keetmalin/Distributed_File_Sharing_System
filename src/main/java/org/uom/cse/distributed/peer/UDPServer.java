@@ -171,7 +171,7 @@ public class UDPServer implements NodeServer {
             for (RoutingTableEntry routingTableEntry : this.node.getRoutingTable().getEntries()) {
 
                 if (entry.getNodeName().equals(Integer.toString(routingTableEntry.getNodeId()))){
-                    resultArray[i] = entry.getFileName() + ":" + this.node.getIpAddress() + ":" + this.node.getPort();
+                    resultArray[i] = entry.getFileName() + ":" + routingTableEntry.getAddress().getHostName() + ":" + routingTableEntry.getAddress().getPort();
                     i++;
                     break;
                 }

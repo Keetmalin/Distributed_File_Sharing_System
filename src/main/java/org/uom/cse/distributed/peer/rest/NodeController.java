@@ -18,9 +18,7 @@ import javax.ws.rs.core.Response;
 import javax.xml.bind.annotation.XmlType;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.uom.cse.distributed.Constants.RETRIES_COUNT;
@@ -173,5 +171,42 @@ public class NodeController {
 
         // retryOrTimeout(RESPONSE_OK, recipient);
         return Response.ok().build();
+    }
+
+    @GET
+    @Path("/Keyword/{keyWord}")
+    public Response queryKeyword(@PathParam("keyWord") String key) {
+
+        String[] results = new String[0];
+        results = searchEntryTableForKeyword(key);
+        Set<String> finalResult = new HashSet<String> (Arrays.asList(results));
+
+        try {
+            return Response.ok(RequestUtils.buildObjectRequest(finalResult)).build();
+        } catch (IOException e) {
+            logger.error("Error occurred when searching for keyword -> {} : {}", e);
+            return Response.serverError().build();
+        }
+    }
+
+    private String[] searchEntryTableForKeyword(String keyword) {
+        char c = Character.toUpperCase(keyword.charAt(0));
+        List<EntryTableEntry> entryList = this.node.getEntryTable().getEntries().get(c).get(keyword);
+        String[] resultArray = new String[entryList.size()];
+        int i = 0;
+        for (EntryTableEntry entry : entryList) {
+
+
+            for (RoutingTableEntry routingTableEntry : this.node.getRoutingTable().getEntries()) {
+
+                if (entry.getNodeName().equals(Integer.toString(routingTableEntry.getNodeId()))){
+                    resultArray[i] = entry.getFileName() + ":" + routingTableEntry.getAddress().getHostName() + ":" + routingTableEntry.getAddress().getPort();
+                    i++;
+                    break;
+                }
+            }
+
+        }
+        return resultArray;
     }
 }

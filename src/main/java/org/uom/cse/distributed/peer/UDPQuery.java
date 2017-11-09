@@ -84,10 +84,6 @@ public class UDPQuery implements QueryInterface {
     public Set<String> searchKeyword(String keyword) {
         queryResultSet.clear();
         hopCount = 0;
-//        // 1. First look in the same node for the requested file name
-//        if (searchMyFilesKeyWord(keyword)) {
-//            logger.info("keyword {} is available in your node itself", keyword);
-//        }
 
         int nodeId = HashUtils.keywordToNodeId(keyword);
 

@@ -135,4 +135,75 @@ public class RestQuery implements QueryInterface{
         return inetSocketAddresses;
     }
 
+    public Set<String> searchKeyword(String keyword) {
+        queryResultSet.clear();
+        hopCount = 0;
+
+        int nodeId = HashUtils.keywordToNodeId(keyword);
+
+        Optional<RoutingTableEntry> entry = this.node.getRoutingTable().findNodeOrSuccessor(nodeId);
+        Optional<RoutingTableEntry> entrySuccessor1 = this.node.getRoutingTable().findSuccessorOf(nodeId);
+        Optional<RoutingTableEntry> entrySuccessor2 = this.node.getRoutingTable().findSuccessorOf(entrySuccessor1.get().getNodeId());
+
+        boolean temp = false;
+        //if the next node is pointing to the current node
+        if (entry.isPresent() && entry.get().getNodeId() == node.getNodeId()) {
+            queryResultSet = getResultListSafely(keyword);
+            temp = true;
+
+        } else if (entry.isPresent() && entry.get().getNodeId() != node.getNodeId()) {
+            logger.info("searching for the node in Node {}", entry.get().getNodeId());
+            queryResultSet = (this.node.getCommunicationProvider().searchKeywordFile(entry.get().getAddress(), keyword));
+            hopCount++;
+        } if (queryResultSet.size() == 0 && temp && entrySuccessor1.get().getNodeId() != node.getNodeId()) {
+            logger.info("searching for the node in Node {}", entrySuccessor1.get().getNodeId());
+            queryResultSet = (this.node.getCommunicationProvider().searchKeywordFile(entrySuccessor1.get().getAddress(), keyword));
+            hopCount++;
+        } if (entrySuccessor2.isPresent() && queryResultSet.size() == 0 && entrySuccessor2.get().getNodeId() != node.getNodeId()) {
+            logger.info("searching for the node in Node {}", entrySuccessor2.get().getNodeId());
+            queryResultSet = (this.node.getCommunicationProvider().searchKeywordFile(entrySuccessor2.get().getAddress(), keyword));
+            hopCount++;
+        } else if (queryResultSet.size() == 0){
+            logger.info("Entry is not present in the Network");
+        }
+
+
+
+        logger.info("Search results -> {}", queryResultSet);
+        return queryResultSet;
+
+    }
+
+    HashSet<String> getResultListSafely(String keyword) {
+        try {
+            return new HashSet<String>(Arrays.asList(searchEntryTableForKeyword(keyword)));
+        } catch (Exception e) {
+            return new HashSet<String>();
+        }
+    }
+
+    private String[] searchEntryTableForKeyword(String keyword) {
+        char c = Character.toUpperCase(keyword.charAt(0));
+        List<EntryTableEntry> entryList = this.node.getEntryTable().getEntries().get(c).get(keyword);
+        String[] resultArray = new String[entryList.size()];
+
+        int i = 0;
+        for (EntryTableEntry entry : entryList) {
+
+
+            for (RoutingTableEntry routingTableEntry : this.node.getRoutingTable().getEntries()) {
+
+                if (entry.getNodeName().equals(Integer.toString(routingTableEntry.getNodeId()))){
+                    resultArray[i] = entry.getFileName() + ":" + routingTableEntry.getAddress().getHostName() + ":" + routingTableEntry.getAddress().getPort();
+                    i++;
+                    break;
+                }
+            }
+
+        }
+
+
+        return resultArray;
+    }
+
 }
