@@ -82,6 +82,7 @@ public class UDPQuery implements QueryInterface {
     }
 
     public Set<String> searchKeyword(String keyword) {
+        keyword = newKeywordGenerator(keyword);
         queryResultSet.clear();
         hopCount = 0;
 
@@ -186,6 +187,22 @@ public class UDPQuery implements QueryInterface {
 
 
         return resultArray;
+    }
+
+    private String newKeywordGenerator(String keyword){
+        if (keyword.toLowerCase().equals("xp")){
+            return "XP";
+        }
+         else if (keyword.toLowerCase().equals("of")){
+            return "of";
+        }
+        else if (keyword.toLowerCase().equals("and")){
+            return "and";
+        } else if (keyword.toLowerCase().equals("for")){
+            return "for";
+        } else {
+            return keyword.substring(0,1).toUpperCase() + keyword.substring(1);
+        }
     }
 
     private List<String> searchEntryTable(String keyword, String fileName) {

@@ -16,8 +16,11 @@ import org.uom.cse.distributed.peer.rest.RestNodeServer;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.util.Arrays;
 import java.util.Set;
 import java.util.UUID;
+
+import static org.uom.cse.distributed.Constants.FILE_NAME_ARRAY;
 
 /*
  * To change this license header, choose License Headers in Project Properties.
@@ -40,8 +43,10 @@ public class NewJFrame extends javax.swing.JFrame {
     /**
      * Creates new form NewJFrame
      */
-    private void setPortValue(int port){
-        this.portNo = port;
+    private void setIPValue(String value){
+        String[] temp = value.split(":");
+        this.ipAdd = temp[0];
+        this.portNo = Integer.parseInt(temp[1]);
     }
     public NewJFrame() throws UnknownHostException {
         initComponents();
@@ -90,6 +95,9 @@ public class NewJFrame extends javax.swing.JFrame {
         jScrollPane3 = new javax.swing.JScrollPane();
         fileList = new javax.swing.JList<>();
         labelState = new javax.swing.JLabel();
+        modeLabel = new javax.swing.JLabel();
+        addressLabel = new javax.swing.JLabel();
+        portLabel = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("Distributed Network Terminal");
@@ -251,7 +259,7 @@ public class NewJFrame extends javax.swing.JFrame {
             }
         });
 
-        jLabel4.setText("This Port");
+        jLabel4.setText("This IP Address: This IP Port");
 
         thisPortfield.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -279,9 +287,9 @@ public class NewJFrame extends javax.swing.JFrame {
                                                                         .addComponent(jLabel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                                                         .addComponent(jLabel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                                                                 .addGap(18, 18, 18)
-                                                                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                                                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                                                                         .addComponent(port, javax.swing.GroupLayout.PREFERRED_SIZE, 208, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                                                        .addComponent(ipAddress, javax.swing.GroupLayout.PREFERRED_SIZE, 208, javax.swing.GroupLayout.PREFERRED_SIZE)))))
+                                                                        .addComponent(ipAddress)))))
                                         .addGroup(jPanel4Layout.createSequentialGroup()
                                                 .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 111, javax.swing.GroupLayout.PREFERRED_SIZE)
                                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
@@ -297,18 +305,18 @@ public class NewJFrame extends javax.swing.JFrame {
                 jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                         .addGroup(jPanel4Layout.createSequentialGroup()
                                 .addContainerGap()
-                                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                        .addComponent(jLabel2)
-                                        .addComponent(ipAddress, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                                        .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 17, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                        .addComponent(port, javax.swing.GroupLayout.PREFERRED_SIZE, 20, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                        .addComponent(jLabel4)
-                                        .addComponent(thisPortfield, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addGap(25, 25, 25)
+                                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                                        .addComponent(ipAddress, javax.swing.GroupLayout.DEFAULT_SIZE, 24, Short.MAX_VALUE)
+                                        .addComponent(jLabel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                                .addGap(20, 20, 20)
+                                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                                        .addComponent(port, javax.swing.GroupLayout.DEFAULT_SIZE, 24, Short.MAX_VALUE)
+                                        .addComponent(jLabel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                                .addGap(18, 18, 18)
+                                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                                        .addComponent(thisPortfield, javax.swing.GroupLayout.DEFAULT_SIZE, 24, Short.MAX_VALUE)
+                                        .addComponent(jLabel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                                 .addComponent(radioUDP)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(radioRest)
@@ -375,6 +383,12 @@ public class NewJFrame extends javax.swing.JFrame {
 
         labelState.setText("State");
 
+        modeLabel.setText("Selected Mode  ");
+
+        addressLabel.setText("IP Address");
+
+        portLabel.setText("Port");
+
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
@@ -395,6 +409,12 @@ public class NewJFrame extends javax.swing.JFrame {
                                                                 .addComponent(jPanel6, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                                                                 .addGap(18, 18, 18))
                                                         .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
+                                                                .addComponent(modeLabel)
+                                                                .addGap(174, 174, 174)
+                                                                .addComponent(addressLabel)
+                                                                .addGap(172, 172, 172)
+                                                                .addComponent(portLabel)
+                                                                .addGap(136, 136, 136)
                                                                 .addComponent(labelnodeID)
                                                                 .addGap(76, 76, 76)))
                                                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -412,7 +432,10 @@ public class NewJFrame extends javax.swing.JFrame {
                                 .addContainerGap()
                                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                                         .addComponent(labelnodeID)
-                                        .addComponent(labelState))
+                                        .addComponent(labelState)
+                                        .addComponent(portLabel)
+                                        .addComponent(addressLabel)
+                                        .addComponent(modeLabel))
                                 .addGap(39, 39, 39)
                                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                                         .addComponent(jPanel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
@@ -464,6 +487,10 @@ public class NewJFrame extends javax.swing.JFrame {
         listUpdateThread.suspend();
         nodeList.setListData(new String[]{""});
         fileList.setListData(new String[]{""});
+        loggerArea.setText("");
+        addressLabel.setText("IP Address");
+        portLabel.setText("Port");
+        modeLabel.setText("Selected Mode");
     }
 
     private void fileRadioActionPerformed(java.awt.event.ActionEvent evt) {
@@ -479,17 +506,23 @@ public class NewJFrame extends javax.swing.JFrame {
         //Start
         int nodeId = 0;
         State nodeStat = null;
+        loggerArea.setText("");
+        try{
         String ipBootstrap = ipAddress.getText();
         int portBootstrap = Integer.parseInt(port.getText());
         Constants.BOOTSTRAP_PORT = portBootstrap;
         Constants.BOOTSTRAP_IP = ipBootstrap;
-        if(thisPortfield.getText() !=null){
-            try{
-                setPortValue(Integer.valueOf(thisPortfield.getText()));
-                System.out.println("The port address is "+portNo);
+        if(thisPortfield.getText() != null){
+
+                setIPValue(thisPortfield.getText());
             }
-            catch(Exception e){
-                loggerArea.setText("Provide a valid Port Number!");
+
+
+
+        }
+        catch(NumberFormatException e){
+            if(port.getText()!="") {
+                loggerArea.setText("Provide a valid Port Number! \n");
             }
         }
         if(radioUDP.isSelected()) {
@@ -500,11 +533,14 @@ public class NewJFrame extends javax.swing.JFrame {
                 node.start();
                 started = true;
                 System.out.println("Node started ...");
+                loggerArea.setText("Node started ... \n");
                 Runtime.getRuntime().addShutdownHook(new Thread(node::stop));
+                modeLabel.setText("Selected Mode : UDP");
                 nodeId = node.getNodeId();
                 nodeStat = node.getState();
             } catch (Exception e) {
                 System.err.println("Error occurred: " + e.getMessage());
+                loggerArea.setText("Error occurred: " + e.getMessage()+"\n");
                 return;
             }
         }
@@ -517,14 +553,20 @@ public class NewJFrame extends javax.swing.JFrame {
                 node.start();
                 started = true;
                 System.out.println("Node started ...");
+                loggerArea.setText("Node started ... \n");
                 Runtime.getRuntime().addShutdownHook(new Thread(node::stop));
+                modeLabel.setText("Selected Mode : REST" );
                 nodeId = node.getNodeId();
                 nodeStat = node.getState();
             } catch (Exception e) {
                 System.err.println("Error occurred: " + e.getMessage());
+                loggerArea.setText("Error occurred: " + e.getMessage()+"\n");
                 return;
             }
         }
+
+        addressLabel.setText("IP Address : "+ ipAdd);
+        portLabel.setText("Port : " + portNo);
 
         labelnodeID.setText("Node ID : " + nodeId);
         labelState.setText("State : " + nodeStat);
@@ -585,25 +627,31 @@ public class NewJFrame extends javax.swing.JFrame {
         // Search button
         Set<InetSocketAddress> set = null;
         Set<String> keySet =null;
-        if(started){
+
+        boolean skip = true;
+        for (int j = 0 ; j <FILE_NAME_ARRAY.length ; j++){
+            String word = FILE_NAME_ARRAY[j];
+            if (Arrays.asList(word.split(" ")).contains(fileName.getText())){
+                skip = false;
+                break;
+            }
+        }
+
+        if(started && !skip){
             if(fileRadio.isSelected()){
                 if (radioUDP.isSelected()){
                     set = node.getUdpQuery().searchFullFile(fileName.getText());
                 } else {
                     set = node.getRestQuery().searchFullFile(fileName.getText());
                 }
-
-
                 for(InetSocketAddress address : set){
                     loggerArea.append(fileName.getText() + " : " + address.toString()+ "\n");
                 }
-
                 if(set.size()==0){
                     loggerArea.setText("No such file found ");
                 }
             }
             else if(keywordRadio.isSelected()){
-
                 if (radioUDP.isSelected()){
                     keySet = node.getUdpQuery().searchKeyword(fileName.getText());
                 }
@@ -611,21 +659,19 @@ public class NewJFrame extends javax.swing.JFrame {
                     keySet = node.getRestQuery().searchKeyword(fileName.getText());
                 }
 
-
-
-                for(String file :keySet){
-                    loggerArea.append(file + "\n");
-                }
-
-                if(keySet.size()==0){
+                if (keySet.size() == 0) {
                     loggerArea.setText("No files found with the keyword found ");
+                } else {
+                    for(String file :keySet){
+                        loggerArea.append(file + "\n");
+                    }
                 }
-            }
 
 
-
-
-
+                }
+        }
+        else if (skip){
+            loggerArea.setText("File Not in Network");
         }
 
     }
@@ -682,6 +728,7 @@ public class NewJFrame extends javax.swing.JFrame {
     }
 
     // Variables declaration - do not modify
+    private javax.swing.JLabel addressLabel;
     private javax.swing.ButtonGroup buttonGroup1;
     private javax.swing.ButtonGroup buttonGroup2;
     private javax.swing.JButton clearButton;
@@ -708,8 +755,10 @@ public class NewJFrame extends javax.swing.JFrame {
     private javax.swing.JLabel labelState;
     private javax.swing.JLabel labelnodeID;
     private javax.swing.JTextArea loggerArea;
+    private javax.swing.JLabel modeLabel;
     private javax.swing.JList<String> nodeList;
     private javax.swing.JTextField port;
+    private javax.swing.JLabel portLabel;
     private javax.swing.JRadioButton radioRest;
     private javax.swing.JRadioButton radioUDP;
     private javax.swing.JButton searchButton;
