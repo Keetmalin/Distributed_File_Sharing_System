@@ -164,10 +164,10 @@ public class UDPServer implements NodeServer {
         char c = Character.toUpperCase(keyword.charAt(0));
         List<EntryTableEntry> entryList = this.node.getEntryTable().getEntries().get(c).get(keyword);
         String[] resultArray = new String[entryList.size()];
-
+        int i = 0;
         for (EntryTableEntry entry : entryList) {
 
-            int i = 0;
+
             for (RoutingTableEntry routingTableEntry : this.node.getRoutingTable().getEntries()) {
 
                 if (entry.getNodeName().equals(Integer.toString(routingTableEntry.getNodeId()))){

@@ -529,13 +529,14 @@ public class NewJFrame extends javax.swing.JFrame {
         labelnodeID.setText("Node ID : " + nodeId);
         labelState.setText("State : " + nodeStat);
 
-        String[] nodeArray = new String[50];
+
 
 
 
         listUpdateThread = new Thread(){
             public void run(){
                 while (true){
+                    String[] nodeArray = new String[50];
                     int i=0;
 
                     for(RoutingTableEntry entry : node.getRoutingTable().getEntries()){
@@ -543,6 +544,7 @@ public class NewJFrame extends javax.swing.JFrame {
                         i++;
 
                     }
+
                     nodeList.setListData(nodeArray);
                     try {
                         Thread.sleep(2000);

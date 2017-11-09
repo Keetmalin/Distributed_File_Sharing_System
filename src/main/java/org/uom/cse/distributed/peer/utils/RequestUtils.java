@@ -188,6 +188,9 @@ public class RequestUtils {
      * @return Deserialized object
      */
     public static Object base64StringToObject(String base64) {
+        if (base64.equals("")){
+            return new Object();
+        }
         byte[] received = Base64.getDecoder().decode(base64);
         ByteArrayInputStream bais = new ByteArrayInputStream(received);
         try (ObjectInputStream in = new ObjectInputStream(bais)) {

@@ -15,6 +15,7 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.xml.bind.annotation.XmlType;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.List;
@@ -113,8 +114,8 @@ public class NodeController {
 
     @SuppressWarnings("unchecked")
     @GET
-    @Path("/Ping/{id}")
-    public Response ping(String base64, @PathParam("id") int id) {
+    @Path("/Ping/{id}/{base64}")
+    public Response ping(@PathParam("base64") String base64, @PathParam("id") int id) {
         Map<Character, Map<String, List<EntryTableEntry>>> toBeTakenOver;
         logger.info("Received characters to be taken over -> {}", base64);
 
@@ -139,6 +140,8 @@ public class NodeController {
         }
 
         // TODO: 11/2/17 Add the calling node to my routing table if not present
+
+
 
         //        // 2. Also send any characters to be taken over to this one as well. If present
         //        Optional<RoutingTableEntry> tableEntryOptional = this.node.getRoutingTable().findByNodeId(nodeId);

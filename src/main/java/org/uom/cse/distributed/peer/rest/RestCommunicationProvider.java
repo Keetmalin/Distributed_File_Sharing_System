@@ -12,6 +12,7 @@ import org.uom.cse.distributed.peer.utils.RequestUtils;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -153,6 +154,7 @@ public class RestCommunicationProvider extends CommunicationProvider {
 
         UriBuilder url = UriBuilder.fromPath("Ping")
                 .path(String.valueOf(this.node.getNodeId()))
+                .path(base64)
                 .scheme("http")
                 .host(peer.getAddress().getHostAddress())
                 .port(peer.getPort());
@@ -160,10 +162,13 @@ public class RestCommunicationProvider extends CommunicationProvider {
         Client client = JerseyClientBuilder.createClient();
         try {
             logger.debug("Pinging {} at {}", peer, url);
+//            Response response = client.target(url)
+//                    .request(MediaType.APPLICATION_JSON_TYPE)
+//                    .post(Entity.json(RequestUtils.buildObjectRequest(base64)));
             String response = client.target(url)
-                    .request(MediaType.APPLICATION_JSON_TYPE)
+                    .request(MediaType.APPLICATION_JSON)
                     .get(String.class);
-            logger.debug("Received response : {}", response);
+            logger.debug("Received response : {}", "");
             if (response != null) {
                 Object obj = RequestUtils.base64StringToObject(response);
                 logger.debug("Received entries to take over -> {}", obj);
