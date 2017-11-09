@@ -29,4 +29,6 @@ public interface QueryInterface {
     public boolean searchMyFilesFullName(String fileName);
 
     public int getHopCount();
+
+    public void initialize(Node node);
 }

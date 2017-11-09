@@ -585,9 +585,15 @@ public class NewJFrame extends javax.swing.JFrame {
         Set<String> keySet =null;
         if(started){
             if(fileRadio.isSelected()){
-                set = node.getUdpQuery().searchFullFile(fileName.getText());
+                if (radioUDP.isSelected()){
+                    set = node.getUdpQuery().searchFullFile(fileName.getText());
+                } else {
+                    set = node.getRestQuery().searchFullFile(fileName.getText());
+                }
+
+
                 for(InetSocketAddress address : set){
-                    loggerArea.append(address.toString()+ "\n");
+                    loggerArea.append(fileName.getText() + " : " + address.toString()+ "\n");
                 }
 
                 if(set.size()==0){

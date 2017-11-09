@@ -44,6 +44,7 @@ public class Node implements RoutingTableListener {
     private final EntryTable entryTable = new EntryTable();
     private final List<String> myFiles = new ArrayList<>();
     private final UDPQuery udpQuery = new UDPQuery();
+    private final RestQuery restQuery = new RestQuery();
 
     private final CommunicationProvider communicationProvider;
     private final NodeServer server;
@@ -90,6 +91,8 @@ public class Node implements RoutingTableListener {
         server.start(this);
         communicationProvider.start(this);
         udpQuery.initialize(this);
+        restQuery.initialize(this);
+
 
         logger.debug("Connecting to the distributed network");
         while (!stateManager.isState(CONNECTING)) {
@@ -522,6 +525,10 @@ public class Node implements RoutingTableListener {
 
     public UDPQuery getUdpQuery() {
         return udpQuery;
+    }
+
+    public RestQuery getRestQuery() {
+        return restQuery;
     }
 
     @Override
