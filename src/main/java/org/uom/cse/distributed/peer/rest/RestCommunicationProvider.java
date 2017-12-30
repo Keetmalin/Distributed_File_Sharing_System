@@ -34,7 +34,7 @@ public class RestCommunicationProvider extends CommunicationProvider {
     public void start(Node node) {
         this.node = node;
         //this.queryHopCount = 1;
-        logger.info("Communication provider started");
+        logger.info("Communication provider -  started");
     }
 
     @Override
